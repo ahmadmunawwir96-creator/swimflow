@@ -1,0 +1,39 @@
+{
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "Platform-level role (built-in admin gate). Academy business roles live in the Role/UserRole tables.",
+      "enum": [
+        "admin",
+        "user"
+      ]
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of birth"
+    },
+    "profile_photo": {
+      "type": "string",
+      "description": "Profile photo file URL"
+    },
+    "account_status": {
+      "type": "string",
+      "description": "Account status",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "role"
+  ],
+  "name": "User",
+  "type": "object"
+}

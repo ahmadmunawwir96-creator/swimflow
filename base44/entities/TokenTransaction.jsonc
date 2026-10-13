@@ -1,0 +1,59 @@
+{
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Reference to the Student whose token balance this transaction affects"
+    },
+    "parent_account_id": {
+      "type": "string",
+      "description": "Reference to the parent User account associated with the transaction"
+    },
+    "transaction_type": {
+      "type": "string",
+      "description": "Transaction type",
+      "enum": [
+        "purchase",
+        "use",
+        "refund",
+        "adjustment",
+        "expiry"
+      ]
+    },
+    "amount": {
+      "type": "number",
+      "description": "Token amount. Positive for additions (purchase, refund), negative for deductions (use, expiry). The student balance is the sum of all amounts."
+    },
+    "balance_after": {
+      "type": "number",
+      "description": "Student token balance immediately after this transaction (convenience cache; the ledger is the source of truth)"
+    },
+    "payment_id": {
+      "type": "string",
+      "description": "Reference to the Payment that triggered this purchase (for type=purchase)"
+    },
+    "booking_id": {
+      "type": "string",
+      "description": "Reference to the Booking that consumed this token (for type=use)"
+    },
+    "token_package_id": {
+      "type": "string",
+      "description": "Reference to the TokenPackage purchased (for type=purchase)"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Token expiry date, if applicable"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes about this transaction"
+    }
+  },
+  "required": [
+    "student_id",
+    "transaction_type",
+    "amount"
+  ],
+  "name": "TokenTransaction",
+  "type": "object"
+}

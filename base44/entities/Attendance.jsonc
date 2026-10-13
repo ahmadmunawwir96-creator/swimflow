@@ -1,0 +1,50 @@
+{
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Reference to the Student whose attendance is recorded"
+    },
+    "class_id": {
+      "type": "string",
+      "description": "Reference to the Class this attendance is for"
+    },
+    "booking_id": {
+      "type": "string",
+      "description": "Reference to the Booking this attendance is linked to, if any"
+    },
+    "coach_id": {
+      "type": "string",
+      "description": "Reference to the coach User who recorded attendance"
+    },
+    "attendance_status": {
+      "type": "string",
+      "description": "Attendance status",
+      "enum": [
+        "present",
+        "absent",
+        "late",
+        "excused"
+      ]
+    },
+    "check_in_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Check-in time (supports manual or future QR-code check-in)"
+    },
+    "check_out_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Check-out time, if applicable"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes about the attendance"
+    }
+  },
+  "required": [
+    "student_id",
+    "class_id"
+  ],
+  "name": "Attendance",
+  "type": "object"
+}

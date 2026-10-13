@@ -1,0 +1,37 @@
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Package name"
+    },
+    "token_count": {
+      "type": "number",
+      "description": "Number of tokens in the package"
+    },
+    "price": {
+      "type": "number",
+      "description": "Price of the package"
+    },
+    "currency": {
+      "type": "string",
+      "description": "Currency code",
+      "default": "MYR"
+    },
+    "description": {
+      "type": "string",
+      "description": "Package description"
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether the package is active and purchasable",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "token_count",
+    "price"
+  ],
+  "name": "TokenPackage",
+  "type": "object"
+}

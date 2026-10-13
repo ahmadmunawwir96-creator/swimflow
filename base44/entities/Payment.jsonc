@@ -1,0 +1,65 @@
+{
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Reference to the Student the tokens are credited to"
+    },
+    "parent_account_id": {
+      "type": "string",
+      "description": "Reference to the parent User account making the payment"
+    },
+    "token_package_id": {
+      "type": "string",
+      "description": "Reference to the TokenPackage purchased"
+    },
+    "package_name_snapshot": {
+      "type": "string",
+      "description": "Package name at the time of payment (historical, preserved against future price changes)"
+    },
+    "tokens_purchased_snapshot": {
+      "type": "number",
+      "description": "Number of tokens purchased at the time of payment (historical)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Payment amount"
+    },
+    "currency": {
+      "type": "string",
+      "description": "Currency code",
+      "default": "MYR"
+    },
+    "status": {
+      "type": "string",
+      "description": "Payment status",
+      "enum": [
+        "pending",
+        "paid",
+        "failed",
+        "refunded",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Payment method (provider-agnostic, e.g. card, online_banking, cash)"
+    },
+    "payment_reference": {
+      "type": "string",
+      "description": "External payment provider reference/transaction id"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date the payment was made"
+    }
+  },
+  "required": [
+    "student_id",
+    "parent_account_id",
+    "amount"
+  ],
+  "name": "Payment",
+  "type": "object"
+}

@@ -1,0 +1,32 @@
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Role name",
+      "enum": [
+        "admin",
+        "coach",
+        "parent"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Role description"
+    },
+    "is_system": {
+      "type": "boolean",
+      "description": "Whether this is a built-in system role that cannot be deleted",
+      "default": true
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether this role is active and assignable",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "name": "Role",
+  "type": "object"
+}

@@ -1,0 +1,59 @@
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Class name"
+    },
+    "coach_id": {
+      "type": "string",
+      "description": "Reference to the coach User taking the class"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to the Location/branch where the class is held"
+    },
+    "class_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the class"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time of the class"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time of the class"
+    },
+    "max_capacity": {
+      "type": "number",
+      "description": "Maximum number of students that can book the class"
+    },
+    "status": {
+      "type": "string",
+      "description": "Class status",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "skill_level": {
+      "type": "string",
+      "description": "Skill level the class is aimed at",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "coach_id",
+    "class_date"
+  ],
+  "name": "Class",
+  "type": "object"
+}

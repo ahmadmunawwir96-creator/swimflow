@@ -1,0 +1,32 @@
+{
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Reference to the User this role is assigned to"
+    },
+    "role_id": {
+      "type": "string",
+      "description": "Reference to the Role"
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "Reference to the admin User who assigned this role"
+    },
+    "assigned_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the role was assigned"
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether this role assignment is currently active",
+      "default": true
+    }
+  },
+  "required": [
+    "user_id",
+    "role_id"
+  ],
+  "name": "UserRole",
+  "type": "object"
+}

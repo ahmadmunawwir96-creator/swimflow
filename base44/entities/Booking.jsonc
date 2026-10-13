@@ -1,0 +1,56 @@
+{
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Reference to the Student booked into the class"
+    },
+    "class_id": {
+      "type": "string",
+      "description": "Reference to the Class being booked"
+    },
+    "parent_account_id": {
+      "type": "string",
+      "description": "Reference to the parent User account that made the booking"
+    },
+    "token_transaction_id": {
+      "type": "string",
+      "description": "Reference to the TokenTransaction that deducted the token for this booking"
+    },
+    "status": {
+      "type": "string",
+      "description": "Booking status",
+      "enum": [
+        "booked",
+        "attended",
+        "cancelled",
+        "no_show"
+      ],
+      "default": "booked"
+    },
+    "token_cost": {
+      "type": "number",
+      "description": "Number of tokens this booking cost"
+    },
+    "booking_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date the booking was made"
+    },
+    "cancellation_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date the booking was cancelled, if applicable"
+    },
+    "cancellation_reason": {
+      "type": "string",
+      "description": "Reason for cancellation, if applicable"
+    }
+  },
+  "required": [
+    "student_id",
+    "class_id",
+    "parent_account_id"
+  ],
+  "name": "Booking",
+  "type": "object"
+}

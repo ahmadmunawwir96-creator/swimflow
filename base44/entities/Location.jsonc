@@ -1,0 +1,22 @@
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Location/branch name (e.g. academy pool name)"
+    },
+    "address": {
+      "type": "string",
+      "description": "Location address"
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether the location is active",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "name": "Location",
+  "type": "object"
+}

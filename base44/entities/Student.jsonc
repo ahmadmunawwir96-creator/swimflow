@@ -1,0 +1,82 @@
+{
+  "properties": {
+    "parent_account_id": {
+      "type": "string",
+      "description": "Reference to the parent/guardian User account"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Student full name"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Student date of birth"
+    },
+    "gender": {
+      "type": "string",
+      "description": "Gender",
+      "enum": [
+        "male",
+        "female",
+        "other"
+      ]
+    },
+    "swimming_level": {
+      "type": "string",
+      "description": "Swimming level",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "skill_progression": {
+      "type": "string",
+      "description": "Current skill/progression level notes"
+    },
+    "medical_notes": {
+      "type": "string",
+      "description": "Medical/safety notes"
+    },
+    "emergency_contact_name": {
+      "type": "string",
+      "description": "Emergency contact name"
+    },
+    "emergency_contact_phone": {
+      "type": "string",
+      "description": "Emergency contact phone"
+    },
+    "status": {
+      "type": "string",
+      "description": "Student status",
+      "enum": [
+        "active",
+        "inactive",
+        "trial",
+        "left"
+      ],
+      "default": "active"
+    },
+    "date_joined": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the student joined"
+    },
+    "date_left": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the student left"
+    },
+    "reason_for_leaving": {
+      "type": "string",
+      "description": "Reason for leaving"
+    }
+  },
+  "required": [
+    "parent_account_id",
+    "full_name"
+  ],
+  "name": "Student",
+  "type": "object"
+}
