@@ -16,6 +16,10 @@
       "type": "string",
       "description": "Reference to the coach User who recorded attendance"
     },
+    "parent_account_id": {
+      "type": "string",
+      "description": "Optional reference to the parent User account, to support secure parent read access to their child's attendance"
+    },
     "attendance_status": {
       "type": "string",
       "description": "Attendance status",
@@ -45,6 +49,35 @@
     "student_id",
     "class_id"
   ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.parent_account_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
   "name": "Attendance",
   "type": "object"
 }

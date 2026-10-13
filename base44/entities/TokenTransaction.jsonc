@@ -25,7 +25,7 @@
     },
     "balance_after": {
       "type": "number",
-      "description": "Student token balance immediately after this transaction (convenience cache; the ledger is the source of truth)"
+      "description": "Student token balance immediately after this transaction. Convenience field only, never authoritative; the ledger (sum of all amounts) is the source of truth."
     },
     "payment_id": {
       "type": "string",
@@ -33,11 +33,15 @@
     },
     "booking_id": {
       "type": "string",
-      "description": "Reference to the Booking that consumed this token (for type=use)"
+      "description": "Reference to the Booking that consumed this token, or whose token is being restored on refund. Retained so refunds and usage history link back to a booking."
     },
     "token_package_id": {
       "type": "string",
       "description": "Reference to the TokenPackage purchased (for type=purchase)"
+    },
+    "related_transaction_id": {
+      "type": "string",
+      "description": "Optional reference to the original TokenTransaction being reversed or adjusted (for refund, expiry, or manual adjustment audit trail)"
     },
     "expiry_date": {
       "type": "string",
@@ -54,6 +58,35 @@
     "transaction_type",
     "amount"
   ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.parent_account_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
   "name": "TokenTransaction",
   "type": "object"
 }

@@ -53,6 +53,11 @@
       "type": "string",
       "format": "date-time",
       "description": "Date the payment was made"
+    },
+    "tokens_awarded": {
+      "type": "boolean",
+      "description": "Whether tokens have been awarded to the student for this confirmed payment (idempotency guard)",
+      "default": false
     }
   },
   "required": [
@@ -60,6 +65,42 @@
     "parent_account_id",
     "amount"
   ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.parent_account_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "data.parent_account_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
   "name": "Payment",
   "type": "object"
 }
