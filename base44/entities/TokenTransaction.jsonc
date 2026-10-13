@@ -4,9 +4,9 @@
       "type": "string",
       "description": "Reference to the Student whose token balance this transaction affects"
     },
-    "parent_account_id": {
+    "account_id": {
       "type": "string",
-      "description": "Reference to the parent User account associated with the transaction"
+      "description": "Reference to the owning User account (self-managed student or parent/guardian) associated with the transaction"
     },
     "transaction_type": {
       "type": "string",
@@ -62,7 +62,7 @@
     "read": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
