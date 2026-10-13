@@ -6,7 +6,8 @@
       "enum": [
         "admin",
         "coach",
-        "parent"
+        "parent",
+        "student"
       ]
     },
     "description": {

@@ -1,8 +1,28 @@
 {
   "properties": {
-    "parent_account_id": {
+    "account_id": {
       "type": "string",
-      "description": "Reference to the parent/guardian User account"
+      "description": "Reference to the owning User account. For a self-managed student this is the swimmer themselves; for a parent-managed swimmer this is the parent/guardian."
+    },
+    "ownership_type": {
+      "type": "string",
+      "description": "Whether the owning account is the swimmer themselves or a parent/guardian managing on their behalf",
+      "enum": [
+        "self",
+        "dependent"
+      ],
+      "default": "dependent"
+    },
+    "relationship": {
+      "type": "string",
+      "description": "Relationship of the owning account to the swimmer (for dependants)",
+      "enum": [
+        "self",
+        "child",
+        "dependant",
+        "ward",
+        "sibling"
+      ]
     },
     "full_name": {
       "type": "string",
@@ -71,17 +91,41 @@
     "reason_for_leaving": {
       "type": "string",
       "description": "Reason for leaving"
+    },
+    "consent_status": {
+      "type": "string",
+      "description": "Guardian consent status for self-managed minors. 'not_required' for dependants (parent is the consenting party) or adults. Registration is never blocked by age; booking/payment for pending/refused is disabled by backend policy only.",
+      "enum": [
+        "not_required",
+        "pending",
+        "given",
+        "refused"
+      ],
+      "default": "not_required"
+    },
+    "consent_guardian_name": {
+      "type": "string",
+      "description": "Name of the guardian who gave consent, for self-managed minors (no separate guardian account required)"
+    },
+    "consent_guardian_phone": {
+      "type": "string",
+      "description": "Phone of the guardian who gave consent, for self-managed minors"
+    },
+    "consent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date consent was recorded"
     }
   },
   "required": [
-    "parent_account_id",
+    "account_id",
     "full_name"
   ],
   "rls": {
     "read": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -93,7 +137,7 @@
     "create": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -105,7 +149,7 @@
     "update": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -117,7 +161,7 @@
     "delete": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {

@@ -16,9 +16,9 @@
       "type": "string",
       "description": "Reference to the coach User who recorded attendance"
     },
-    "parent_account_id": {
+    "account_id": {
       "type": "string",
-      "description": "Optional reference to the parent User account, to support secure parent read access to their child's attendance"
+      "description": "Optional reference to the owning User account (self-managed student or parent/guardian), to support secure owner read access to attendance"
     },
     "attendance_status": {
       "type": "string",
@@ -53,7 +53,7 @@
     "read": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {

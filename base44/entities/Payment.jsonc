@@ -4,9 +4,9 @@
       "type": "string",
       "description": "Reference to the Student the tokens are credited to"
     },
-    "parent_account_id": {
+    "account_id": {
       "type": "string",
-      "description": "Reference to the parent User account making the payment"
+      "description": "Reference to the owning User account (self-managed student or parent/guardian) associated with the payment"
     },
     "token_package_id": {
       "type": "string",
@@ -62,14 +62,14 @@
   },
   "required": [
     "student_id",
-    "parent_account_id",
+    "account_id",
     "amount"
   ],
   "rls": {
     "read": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -81,7 +81,7 @@
     "create": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {

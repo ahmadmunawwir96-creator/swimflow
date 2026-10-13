@@ -8,9 +8,9 @@
       "type": "string",
       "description": "Reference to the Class being booked"
     },
-    "parent_account_id": {
+    "account_id": {
       "type": "string",
-      "description": "Reference to the parent User account that made the booking"
+      "description": "Reference to the owning User account (self-managed student or parent/guardian) that made the booking"
     },
     "token_transaction_id": {
       "type": "string",
@@ -49,13 +49,13 @@
   "required": [
     "student_id",
     "class_id",
-    "parent_account_id"
+    "account_id"
   ],
   "rls": {
     "read": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -67,7 +67,7 @@
     "create": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -79,7 +79,7 @@
     "update": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -91,7 +91,7 @@
     "delete": {
       "$or": [
         {
-          "data.parent_account_id": "{{user.id}}"
+          "data.account_id": "{{user.id}}"
         },
         {
           "user_condition": {
