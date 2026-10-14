@@ -3,6 +3,7 @@ import {
   findRoleByName,
   getActiveAcademyAdminAssignment,
   publicAssignment,
+  resolveUserMap,
   asArrayFallback
 } from '../../shared/academyRoles.ts';
 
@@ -53,7 +54,10 @@ export default async function(req) {
       for (const r of asArrayFallback(rolesPage)) roleMap[r.id] = r;
     }
 
-    const out = assignments.map(a => publicAssignment(a, roleMap[a.role_id]));
+    // Enrich with user names/emails so the admin table shows people, not just IDs.
+    const userMap = await resolveUserMap(base44, assignments.map(a => a.user_id));
+
+    const out = assignments.map(a => publicAssignment(a, roleMap[a.role_id], userMap[a.user_id]));
     return Response.json({ assignments: out, count: out.length, truncated: assignments.length === 100 }, { status: 200 });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

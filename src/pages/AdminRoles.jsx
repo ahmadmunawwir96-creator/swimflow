@@ -125,9 +125,11 @@ export default function AdminRoles() {
               <div className="text-sm">
                 <span className="font-medium">{found.full_name || 'Unknown'}</span> · {found.email}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign student</Button>
                 <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign parent</Button>
+                <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign coach</Button>
+                <Button size="sm" variant="outline" onClick={() => assign('admin')} disabled={busy}>Assign admin</Button>
               </div>
             </div>
           )}
@@ -158,7 +160,10 @@ export default function AdminRoles() {
               <TableBody>
                 {assignments.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="font-mono text-xs">{a.user_id}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{a.user_name || 'Unknown'}</div>
+                      <div className="text-xs text-muted-foreground">{a.user_email || a.user_id}</div>
+                    </TableCell>
                     <TableCell><Badge variant="secondary" className="capitalize">{a.role_name}</Badge></TableCell>
                     <TableCell><Badge variant={a.is_active ? 'default' : 'outline'}>{a.is_active ? 'active' : 'inactive'}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{a.assigned_date ? new Date(a.assigned_date).toLocaleDateString() : '—'}</TableCell>

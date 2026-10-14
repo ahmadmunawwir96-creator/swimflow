@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { isAcademyAdmin } = useAcademyRoles();
+  const { isAcademyAdmin, isParent, isStudent } = useAcademyRoles();
   const navigate = useNavigate();
 
   const linkClass = ({ isActive }) =>
@@ -30,9 +30,11 @@ export default function Layout() {
             <NavLink to="/" className={linkClass} end>
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </NavLink>
-            <NavLink to="/my-profile" className={linkClass}>
-              <User className="h-4 w-4" /> My Profiles
-            </NavLink>
+            {(isParent || isStudent) && !isAcademyAdmin && (
+              <NavLink to="/my-profile" className={linkClass}>
+                <User className="h-4 w-4" /> My Profiles
+              </NavLink>
+            )}
             {isAcademyAdmin && (
               <NavLink to="/admin-roles" className={linkClass}>
                 <Users className="h-4 w-4" /> Roles

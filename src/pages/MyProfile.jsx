@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import StudentProfileForm from '@/components/StudentProfileForm';
 import { academyApi } from '@/lib/academy';
+import { useAcademyRoles } from '@/hooks/useAcademyRoles';
 import { useToast } from '@/components/ui/use-toast';
-import { Pencil, User, Users } from 'lucide-react';
+import { Pencil, User, Users, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 function pageItems(p) {
   return Array.isArray(p) ? p : (p?.items || []);
@@ -17,6 +19,7 @@ function pageItems(p) {
 export default function MyProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isParent } = useAcademyRoles();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -58,9 +61,16 @@ export default function MyProfile() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-heading font-semibold">My swimmer profiles</h1>
-        <p className="text-muted-foreground">Profiles you own as a swimmer or on behalf of dependents.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-heading font-semibold">My swimmer profiles</h1>
+          <p className="text-muted-foreground">Profiles you own as a swimmer or on behalf of dependents.</p>
+        </div>
+        {isParent && (
+          <Button asChild size="sm">
+            <Link to="/create-dependent"><UserPlus className="h-4 w-4" /> Add dependent</Link>
+          </Button>
+        )}
       </div>
 
       {loading ? (

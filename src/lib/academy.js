@@ -24,5 +24,6 @@ export const academyApi = {
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
   createSelfProfile: (values) => call('createMyStudentProfile', values),
   createDependentProfile: (values) => call('createDependentStudentProfile', values),
-  updateMyProfile: (values) => call('updateMyStudentProfile', values)
+  updateMyProfile: (values) => call('updateMyStudentProfile', values),
+  registerAccount: (values) => call('registerAccount', values)
 };

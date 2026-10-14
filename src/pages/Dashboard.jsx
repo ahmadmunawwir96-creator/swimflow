@@ -6,11 +6,18 @@ import { useAcademyRoles } from '@/hooks/useAcademyRoles';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Users, User, ShieldCheck, ArrowRight, Compass } from 'lucide-react';
+import { Users, ShieldCheck, Compass } from 'lucide-react';
 
 function pageItems(p) {
   return Array.isArray(p) ? p : (p?.items || []);
 }
+
+const ROLE_LABELS = {
+  admin: 'Academy Admin',
+  coach: 'Coach',
+  parent: 'Parent',
+  student: 'Swimmer'
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -41,14 +48,14 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-heading font-semibold">
-          Welcome{user?.full_name ? `, ${user.full_name}` : ''}
+          Welcome, {user?.full_name || user?.email || ''}
         </h1>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {loading ? (
             <Badge variant="secondary">Loading roles…</Badge>
           ) : roles.length ? (
             roles.map((r) => (
-              <Badge key={r} variant="secondary" className="capitalize">{r}</Badge>
+              <Badge key={r} variant="secondary">{ROLE_LABELS[r] || r}</Badge>
             ))
           ) : (
             <Badge variant="outline">No academy role yet</Badge>
@@ -71,24 +78,6 @@ export default function Dashboard() {
       )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><User className="h-4 w-4" /> My swimmer profiles</CardTitle>
-            <CardDescription>{loadingStudents ? 'Loading…' : `${students.length} profile(s)`}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" size="sm"><Link to="/my-profile">View profiles <ArrowRight className="h-4 w-4" /></Link></Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><UserPlus className="h-4 w-4" /> Create a self profile</CardTitle>
-            <CardDescription>Manage your own swimmer profile</CardDescription>
-          </CardHeader>
-          <CardContent><Button asChild size="sm"><Link to="/create-self-profile">Create self profile</Link></Button></CardContent>
-        </Card>
-
         {isParent && (
           <Card>
             <CardHeader>
