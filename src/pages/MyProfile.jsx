@@ -13,7 +13,7 @@ import { Pencil, User, Users, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function pageItems(p) {
-  return Array.isArray(p) ? p : (p?.items || []);
+  return Array.isArray(p) ? p : p?.items || [];
 }
 
 export default function MyProfile() {
@@ -64,27 +64,27 @@ export default function MyProfile() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-semibold">My swimmer profiles</h1>
-          <p className="text-muted-foreground">Profiles you own as a swimmer or on behalf of dependents.</p>
+          <p className="text-muted-foreground">P</p>
         </div>
-        {isParent && (
-          <Button asChild size="sm">
+        {isParent &&
+        <Button asChild size="sm">
             <Link to="/create-dependent"><UserPlus className="h-4 w-4" /> Add dependent</Link>
           </Button>
-        )}
+        }
       </div>
 
-      {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
-      ) : students.length === 0 ? (
-        <Card>
+      {loading ?
+      <p className="text-muted-foreground">Loading…</p> :
+      students.length === 0 ?
+      <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
             No profiles yet. Create a self profile or add a dependent to get started.
           </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-3">
-          {students.map((s) => (
-            <Card key={s.id}>
+        </Card> :
+
+      <div className="grid gap-3">
+          {students.map((s) =>
+        <Card key={s.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -113,24 +113,24 @@ export default function MyProfile() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+        )}
         </div>
-      )}
+      }
 
-      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
+      <Dialog open={!!editing} onOpenChange={(o) => {if (!o) setEditing(null);}}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Edit profile</DialogTitle></DialogHeader>
-          {editing && (
-            <StudentProfileForm
-              mode="edit"
-              initialValues={editing}
-              submitting={submitting}
-              onSubmit={saveEdit}
-              onCancel={() => setEditing(null)}
-            />
-          )}
+          {editing &&
+          <StudentProfileForm
+            mode="edit"
+            initialValues={editing}
+            submitting={submitting}
+            onSubmit={saveEdit}
+            onCancel={() => setEditing(null)} />
+
+          }
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 }
