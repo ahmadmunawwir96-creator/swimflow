@@ -64,7 +64,7 @@ export default function MyProfile() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-semibold">My swimmer profiles</h1>
-          <p className="text-muted-foreground">add something else</p>
+          <p className="text-muted-foreground">add something else here</p>
         </div>
         {isParent &&
         <Button asChild size="sm">
