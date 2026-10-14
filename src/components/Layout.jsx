@@ -42,7 +42,7 @@ export default function Layout() {
             )}
           </nav>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">{user?.display_name || user?.full_name || user?.email}</span>
             <Button variant="outline" size="sm" onClick={() => logout()}>
               <LogOut className="h-4 w-4" /> Logout
             </Button>

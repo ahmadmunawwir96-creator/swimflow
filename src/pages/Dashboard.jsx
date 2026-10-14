@@ -48,7 +48,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-heading font-semibold">
-          Welcome, {user?.full_name || user?.email || ''}
+          Welcome, {user?.display_name || user?.full_name || user?.email || ''}
         </h1>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {loading ? (

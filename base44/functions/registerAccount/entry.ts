@@ -145,6 +145,18 @@ export default async function(req) {
       }
     }
 
+    // Record the user's display name on their account so the app greets people
+    // by name (dashboard greeting, header, admin role table) rather than email.
+    // The built-in full_name is read-only, so we use the custom display_name field.
+    const displayName = isParent ? parentName : values.full_name;
+    if (displayName) {
+      try {
+        await base44.asServiceRole.entities.User.update(user.id, { display_name: displayName });
+      } catch {
+        // Non-fatal: role/profile still created; UI falls back to full_name/email.
+      }
+    }
+
     return Response.json(
       { role: roleName, assignment: { id: assignment.id, role_name: roleName, is_active: true }, student },
       { status: 201 }

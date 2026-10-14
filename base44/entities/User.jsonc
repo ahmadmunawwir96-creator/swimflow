@@ -29,6 +29,10 @@
         "inactive"
       ],
       "default": "active"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name shown across the app (dashboard greeting, header, admin role table). Set at registration from the swimmer's own name (independent) or the parent/guardian name. The built-in full_name is read-only, so this field carries the human name."
     }
   },
   "required": [

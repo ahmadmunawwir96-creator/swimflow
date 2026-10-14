@@ -16,7 +16,7 @@ import { safeReturnTo } from "@/lib/authReturnTo";
 
 const ACCOUNT_TYPES = [
   { value: "independent", title: "Independent swimmer", desc: "You are the swimmer. Manage your own profile and bookings.", icon: User },
-  { value: "parent_guardian", title: "Under parent / guardian", desc: "You manage swimmer profiles for your children or dependants.", icon: Users }
+  { value: "parent_guardian", title: "Parent / Guardian", desc: "You manage swimmer profiles for your children or dependants.", icon: Users }
 ];
 
 export default function Register() {

@@ -7,11 +7,11 @@ import { asArray } from './studentProfile.ts';
 // Re-export the page/array normalizer under the alias the list function imports.
 export { asArray as asArrayFallback };
 
-// Roles that assignAcademyRole may grant (academy admins promote members).
-// 'admin' (academy admin) and 'coach' are included so admins can promote
-// students/parents to coach or academy admin. The first academy admin still
-// comes from bootstrapAcademyAdmin; subsequent admins can be assigned here.
-export const ASSIGNABLE_ROLES = ['student', 'parent', 'coach', 'admin'];
+// Roles that assignAcademyRole may grant. Student and Parent only for now;
+// Coach and Academy-Admin assignment require a separate, separately-authorized
+// workflow and are intentionally NOT exposed here. The first academy admin
+// comes from bootstrapAcademyAdmin; existing academy admins manage members.
+export const ASSIGNABLE_ROLES = ['student', 'parent'];
 
 // Academy-admin role name. Distinct from the built-in platform User.role === 'admin'.
 export const ACADEMY_ADMIN_ROLE = 'admin';
@@ -106,7 +106,7 @@ export async function findUserByEmail(base44, email) {
 
 // Minimal public projection of a user for role-management UIs.
 export function publicUser(user) {
-  return { user_id: user.id, email: user.email, full_name: user.full_name };
+  return { user_id: user.id, email: user.email, full_name: user.full_name || user.display_name || null };
 }
 
 // Minimal projection of a role assignment joined with its Role name and owner.
@@ -114,7 +114,7 @@ export function publicAssignment(assignment, role, user) {
   return {
     id: assignment.id,
     user_id: assignment.user_id,
-    user_name: user ? user.full_name : null,
+    user_name: user ? (user.full_name || user.display_name) : null,
     user_email: user ? user.email : null,
     role_id: assignment.role_id,
     role_name: role ? role.name : null,

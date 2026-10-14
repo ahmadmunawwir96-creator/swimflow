@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/table';
 import { academyApi } from '@/lib/academy';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, ShieldCheck, UserCog } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Search, ShieldCheck, UserCog, ArrowLeftRight } from 'lucide-react';
+
+// Student <-> Parent change only. Coach/Admin are intentionally not offered.
+const OTHER_ROLE = { student: 'parent', parent: 'student' };
+const ROLE_LABEL = { student: 'Student', parent: 'Parent', coach: 'Coach', admin: 'Academy Admin' };
 
 export default function AdminRoles() {
   const { isAcademyAdmin, loading: rolesLoading } = useAcademyRoles();
@@ -62,7 +67,9 @@ export default function AdminRoles() {
     setBusy(true);
     try {
       await academyApi.assignRole(found.user_id, role_name);
-      toast({ title: `Assigned ${role_name} role` });
+      toast({ title: `Assigned ${ROLE_LABEL[role_name]} role` });
+      setFound(null);
+      setEmail('');
       loadList();
     } catch (e) {
       toast({ title: 'Assignment failed', description: e.message, variant: 'destructive' });
@@ -72,7 +79,7 @@ export default function AdminRoles() {
   };
 
   const revoke = async (a) => {
-    if (!confirm(`Revoke ${a.role_name} role from this user?`)) return;
+    if (!confirm(`Revoke the ${ROLE_LABEL[a.role_name] || a.role_name} role from this user?`)) return;
     setBusy(true);
     try {
       await academyApi.revokeRole(a.user_id, a.role_name);
@@ -80,6 +87,25 @@ export default function AdminRoles() {
       loadList();
     } catch (e) {
       toast({ title: 'Revoke failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeRole = async (a) => {
+    const to = OTHER_ROLE[a.role_name];
+    if (!to) return;
+    if (!confirm(`Change this user's role from ${ROLE_LABEL[a.role_name]} to ${ROLE_LABEL[to]}?`)) return;
+    setBusy(true);
+    try {
+      await academyApi.changeRole(a.user_id, a.role_name, to);
+      toast({ title: 'Role changed', description: `${ROLE_LABEL[a.role_name]} → ${ROLE_LABEL[to]}` });
+      loadList();
+    } catch (e) {
+      // Partial-failure messages (old revoked, new not assigned) arrive from the
+      // backend describing the actual state; refresh so the table reflects it.
+      toast({ title: 'Role change failed', description: e.message, variant: 'destructive' });
+      loadList();
     } finally {
       setBusy(false);
     }
@@ -102,13 +128,13 @@ export default function AdminRoles() {
         <h1 className="text-2xl font-heading font-semibold flex items-center gap-2">
           <ShieldCheck className="h-5 w-5" /> Role administration
         </h1>
-        <p className="text-muted-foreground">Find a member by email and assign or revoke academy roles.</p>
+        <p className="text-muted-foreground">Find a member by email and assign or change academy roles.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Search className="h-4 w-4" /> Find a member</CardTitle>
-          <CardDescription>Search by email to assign a role.</CardDescription>
+          <CardDescription>Search by email to assign a Student or Parent role.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
@@ -126,10 +152,8 @@ export default function AdminRoles() {
                 <span className="font-medium">{found.full_name || 'Unknown'}</span> · {found.email}
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign student</Button>
-                <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign parent</Button>
-                <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign coach</Button>
-                <Button size="sm" variant="outline" onClick={() => assign('admin')} disabled={busy}>Assign admin</Button>
+                <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign Student</Button>
+                <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign Parent</Button>
               </div>
             </div>
           )}
@@ -154,22 +178,44 @@ export default function AdminRoles() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Assigned</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell>
-                      <div className="font-medium">{a.user_name || 'Unknown'}</div>
-                      <div className="text-xs text-muted-foreground">{a.user_email || a.user_id}</div>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary" className="capitalize">{a.role_name}</Badge></TableCell>
-                    <TableCell><Badge variant={a.is_active ? 'default' : 'outline'}>{a.is_active ? 'active' : 'inactive'}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{a.assigned_date ? new Date(a.assigned_date).toLocaleDateString() : '—'}</TableCell>
-                    <TableCell>{a.is_active && <Button size="sm" variant="ghost" onClick={() => revoke(a)} disabled={busy}>Revoke</Button>}</TableCell>
-                  </TableRow>
-                ))}
+                {assignments.map((a) => {
+                  const changeable = a.is_active && OTHER_ROLE[a.role_name];
+                  return (
+                    <TableRow key={a.id} className={a.is_active ? '' : 'opacity-60'}>
+                      <TableCell>
+                        <div className={cn('font-medium', !a.is_active && 'text-muted-foreground line-through')}>
+                          {a.user_name || 'Unknown'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{a.user_email || a.user_id}</div>
+                      </TableCell>
+                      <TableCell><Badge variant="secondary" className="capitalize">{ROLE_LABEL[a.role_name] || a.role_name}</Badge></TableCell>
+                      <TableCell>
+                        {a.is_active
+                          ? <Badge>Active</Badge>
+                          : <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{a.assigned_date ? new Date(a.assigned_date).toLocaleDateString() : '—'}</TableCell>
+                      <TableCell className="text-right">
+                        {a.is_active ? (
+                          <div className="flex justify-end gap-1">
+                            {changeable && (
+                              <Button size="sm" variant="ghost" onClick={() => changeRole(a)} disabled={busy}>
+                                <ArrowLeftRight className="h-3.5 w-3.5" /> Change to {ROLE_LABEL[OTHER_ROLE[a.role_name]]}
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" onClick={() => revoke(a)} disabled={busy}>Revoke</Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No active actions</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

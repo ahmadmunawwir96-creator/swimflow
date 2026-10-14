@@ -20,6 +20,8 @@ export const academyApi = {
     call('assignAcademyRole', { target_user_id, role_name }),
   revokeRole: (target_user_id, role_name) =>
     call('revokeAcademyRole', { target_user_id, role_name }),
+  changeRole: (target_user_id, from_role_name, to_role_name) =>
+    call('changeAcademyRole', { target_user_id, from_role_name, to_role_name }),
   listRoles: (target_user_id) =>
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
   createSelfProfile: (values) => call('createMyStudentProfile', values),
