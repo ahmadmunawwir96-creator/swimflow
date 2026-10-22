@@ -26,9 +26,9 @@ import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown } from
 // Roles an academy admin can switch between via changeAcademyRole.
 // Academy Admin is intentionally NOT here — it is add-only via promote.
 const CHANGE_TARGETS = {
-  student: ['parent', 'coach'],
-  parent: ['student', 'coach'],
-  coach: ['student', 'parent']
+  student: ['parent', 'coach', 'admin'],
+  parent: ['student', 'coach', 'admin'],
+  coach: ['student', 'parent', 'admin']
 };
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', coach: 'Coach', admin: 'Academy Admin' };
 
@@ -121,6 +121,23 @@ export default function AdminRoles() {
 
   const changeRole = async (a, to) => {
     if (!to) return;
+    // Academy Admin is additive: promote (keeps existing roles) rather than
+    // swapping roles, so no access is lost mid-transition.
+    if (to === 'admin') {
+      if (!confirm(`Make ${a.user_name || a.user_email || 'this user'} an Academy Admin? Their existing roles are kept.`)) return;
+      setBusy(true);
+      try {
+        await academyApi.promoteToAdmin(a.user_id);
+        toast({ title: 'Academy Admin granted', description: 'Existing roles are kept.' });
+        loadList();
+      } catch (e) {
+        toast({ title: 'Promotion failed', description: e.message, variant: 'destructive' });
+        loadList();
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!confirm(`Change this user's role from ${ROLE_LABEL[a.role_name]} to ${ROLE_LABEL[to]}?`)) return;
     setBusy(true);
     try {
@@ -250,7 +267,7 @@ export default function AdminRoles() {
                                 <DropdownMenuContent align="end">
                                   {targets.map((to) => (
                                     <DropdownMenuItem key={to} onSelect={() => changeRole(a, to)}>
-                                      Change to {ROLE_LABEL[to]}
+                                      {to === 'admin' ? 'Make Academy Admin (keeps current role)' : `Change to ${ROLE_LABEL[to]}`}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>
