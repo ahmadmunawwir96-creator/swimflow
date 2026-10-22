@@ -184,9 +184,14 @@ export default function AdminRoles() {
                 <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign Student</Button>
                 <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign Parent</Button>
                 <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign Coach</Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t pt-3">
                 <Button size="sm" onClick={promoteToAdmin} disabled={busy}>
                   <Crown className="h-3.5 w-3.5" /> Promote to Academy Admin
                 </Button>
+                <span className="text-xs text-muted-foreground">
+                  Adds Academy Admin access. Existing roles are kept.
+                </span>
               </div>
             </div>
           )}
