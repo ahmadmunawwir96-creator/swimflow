@@ -5,6 +5,7 @@ import {
   findUserById,
   getActiveAcademyAdminAssignment,
   getActiveAssignment,
+  isPlatformAdmin,
   requireString,
   jsonError
 } from '../../shared/academyRoles.ts';
@@ -43,10 +44,14 @@ export default async function(req) {
       );
     }
 
-    // Verify caller's academy-admin authority (server-side, never trust client claim).
+    // Verify caller authority (server-side, never trust client claim).
+    // App admins may assign Student and Parent; the Coach role is academy-admin only.
     const callerAdmin = await getActiveAcademyAdminAssignment(base44, user.id);
-    if (!callerAdmin) {
-      return Response.json({ error: 'Academy administrator authority required' }, { status: 403 });
+    if (!callerAdmin && !isPlatformAdmin(user)) {
+      return Response.json({ error: 'Administrator authority required' }, { status: 403 });
+    }
+    if (!callerAdmin && rn.value === 'coach') {
+      return Response.json({ error: 'Only an Academy Admin can assign the Coach role' }, { status: 403 });
     }
 
     // Validate target user.

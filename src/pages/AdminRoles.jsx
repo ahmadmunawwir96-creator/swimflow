@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAcademyRoles } from '@/hooks/useAcademyRoles';
+import { useAuth } from '@/lib/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,18 +24,28 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown } from 'lucide-react';
 
-// Roles an academy admin can switch between via changeAcademyRole.
-// Academy Admin is intentionally NOT here — it is add-only via promote.
-const CHANGE_TARGETS = {
-  student: ['parent', 'coach', 'admin'],
-  parent: ['student', 'coach', 'admin'],
-  coach: ['student', 'parent', 'admin']
+// Academy admins may move a member between any academy role. 'app_admin' is the
+// built-in app Admin role, granted additively (academy admins only).
+const ACADEMY_ADMIN_TARGETS = {
+  student: ['parent', 'coach'],
+  parent: ['student', 'coach'],
+  coach: ['student', 'parent']
+};
+// An ordinary app admin (platform admin without an academy-admin role) may only
+// make the everyday transitions. Coach-from-parent and App Admin are reserved
+// for academy admins — mirrored server-side in changeAcademyRole.
+const APP_ADMIN_TARGETS = {
+  student: ['parent', 'coach'],
+  parent: ['student']
 };
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', coach: 'Coach', admin: 'Academy Admin' };
 
 export default function AdminRoles() {
   const { isAcademyAdmin, loading: rolesLoading } = useAcademyRoles();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const isAppAdmin = user?.role === 'admin';
+  const canManage = isAcademyAdmin || isAppAdmin;
   const [email, setEmail] = useState('');
   const [found, setFound] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -55,9 +66,18 @@ export default function AdminRoles() {
   };
 
   useEffect(() => {
-    if (isAcademyAdmin) loadList();
+    if (canManage) loadList();
     else setLoadingList(false);
-  }, [isAcademyAdmin]);
+  }, [canManage]);
+
+  // Change options for one assignment row, by caller authority.
+  const targetsFor = (a) => {
+    if (!a.is_active) return [];
+    const matrix = isAcademyAdmin ? ACADEMY_ADMIN_TARGETS : APP_ADMIN_TARGETS;
+    const base = matrix[a.role_name] || [];
+    const canGrantAdmin = isAcademyAdmin && (a.role_name === 'student' || a.role_name === 'parent');
+    return canGrantAdmin ? [...base, 'app_admin'] : base;
+  };
 
   const search = async () => {
     if (!email.trim()) return;
@@ -121,18 +141,16 @@ export default function AdminRoles() {
 
   const changeRole = async (a, to) => {
     if (!to) return;
-    // Academy Admin is additive: promote (keeps existing roles) rather than
-    // swapping roles, so no access is lost mid-transition.
-    if (to === 'admin') {
-      if (!confirm(`Make ${a.user_name || a.user_email || 'this user'} an Academy Admin? Their existing roles are kept.`)) return;
+    // App Admin is the built-in platform role, granted additively: the member's
+    // Student/Parent/Coach assignment is untouched.
+    if (to === 'app_admin') {
+      if (!confirm(`Make ${a.user_name || a.user_email || 'this user'} an app Admin? This grants full administrator access to the app.`)) return;
       setBusy(true);
       try {
-        await academyApi.promoteToAdmin(a.user_id);
-        toast({ title: 'Academy Admin granted', description: 'Existing roles are kept.' });
-        loadList();
+        await academyApi.grantAppAdmin(a.user_id);
+        toast({ title: 'App Admin granted', description: 'The member now has full administrator access.' });
       } catch (e) {
         toast({ title: 'Promotion failed', description: e.message, variant: 'destructive' });
-        loadList();
       } finally {
         setBusy(false);
       }
@@ -155,11 +173,11 @@ export default function AdminRoles() {
   };
 
   if (rolesLoading) return <p className="text-muted-foreground">Loading…</p>;
-  if (!isAcademyAdmin) {
+  if (!canManage) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
-          Academy administrator authority is required to manage roles.
+          Administrator authority is required to manage roles.
         </CardContent>
       </Card>
     );
@@ -172,15 +190,20 @@ export default function AdminRoles() {
           <ShieldCheck className="h-5 w-5" /> Role administration
         </h1>
         <p className="text-muted-foreground">
-          Assign Student, Parent, or Coach, or promote a trusted member to Academy Admin.
-          Promotion keeps existing roles; the last active Academy Admin cannot be removed.
+          {isAcademyAdmin
+            ? 'Assign Student, Parent, or Coach, promote a member to app Admin, or grant Academy Admin. Grants keep existing roles; the last active Academy Admin cannot be removed.'
+            : 'Change members between Student, Parent, and Coach. Coach-from-parent and Admin grants are reserved for Academy Admins.'}
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Search className="h-4 w-4" /> Find a member</CardTitle>
-          <CardDescription>Search by email to assign a role or promote to Academy Admin.</CardDescription>
+          <CardDescription>
+            {isAcademyAdmin
+              ? 'Search by email to assign a role or promote to Academy Admin.'
+              : 'Search by email to assign Student or Parent.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
@@ -200,16 +223,20 @@ export default function AdminRoles() {
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign Student</Button>
                 <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign Parent</Button>
-                <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign Coach</Button>
+                {isAcademyAdmin && (
+                  <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign Coach</Button>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-                <Button size="sm" onClick={promoteToAdmin} disabled={busy}>
-                  <Crown className="h-3.5 w-3.5" /> Promote to Academy Admin
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Adds Academy Admin access. Existing roles are kept.
-                </span>
-              </div>
+              {isAcademyAdmin && (
+                <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                  <Button size="sm" onClick={promoteToAdmin} disabled={busy}>
+                    <Crown className="h-3.5 w-3.5" /> Promote to Academy Admin
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Adds Academy Admin access. Existing roles are kept.
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -238,7 +265,7 @@ export default function AdminRoles() {
               </TableHeader>
               <TableBody>
                 {assignments.map((a) => {
-                  const targets = a.is_active ? CHANGE_TARGETS[a.role_name] : null;
+                  const targets = targetsFor(a);
                   return (
                     <TableRow key={a.id} className={a.is_active ? '' : 'opacity-60'}>
                       <TableCell>
@@ -257,7 +284,7 @@ export default function AdminRoles() {
                       <TableCell className="text-right">
                         {a.is_active ? (
                           <div className="flex justify-end gap-1">
-                            {targets && (
+                            {targets.length > 0 && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button size="sm" variant="ghost" disabled={busy}>
@@ -267,13 +294,15 @@ export default function AdminRoles() {
                                 <DropdownMenuContent align="end">
                                   {targets.map((to) => (
                                     <DropdownMenuItem key={to} onSelect={() => changeRole(a, to)}>
-                                      {to === 'admin' ? 'Make Academy Admin (keeps current role)' : `Change to ${ROLE_LABEL[to]}`}
+                                      {to === 'app_admin' ? 'Make App Admin' : `Change to ${ROLE_LABEL[to]}`}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
-                            <Button size="sm" variant="ghost" onClick={() => revoke(a)} disabled={busy}>Revoke</Button>
+                            {isAcademyAdmin && (
+                              <Button size="sm" variant="ghost" onClick={() => revoke(a)} disabled={busy}>Revoke</Button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">No active actions</span>

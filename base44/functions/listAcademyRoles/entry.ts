@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import {
   findRoleByName,
   getActiveAcademyAdminAssignment,
+  isPlatformAdmin,
   publicAssignment,
   resolveUserMap,
   asArrayFallback
@@ -17,10 +18,10 @@ export default async function(req) {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    // Academy-admin gate.
+    // Administrator gate: academy admin or the built-in app admin role.
     const callerAdmin = await getActiveAcademyAdminAssignment(base44, user.id);
-    if (!callerAdmin) {
-      return Response.json({ error: 'Academy administrator authority required' }, { status: 403 });
+    if (!callerAdmin && !isPlatformAdmin(user)) {
+      return Response.json({ error: 'Administrator authority required' }, { status: 403 });
     }
 
     // Optional target_user_id from query/body. We accept a simple query param or JSON body.

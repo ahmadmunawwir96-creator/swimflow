@@ -1,10 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import {
   ASSIGNABLE_ROLES,
+  canAppAdminChange,
   findRoleByName,
   findUserById,
   getActiveAcademyAdminAssignment,
   getActiveAssignment,
+  isPlatformAdmin,
   requireString
 } from '../../shared/academyRoles.ts';
 
@@ -47,10 +49,20 @@ export default async function(req) {
       return Response.json({ error: 'The user already has this role' }, { status: 400 });
     }
 
-    // Caller must be an academy admin (server-side, never trust a client claim).
+    // Caller authority (server-side, never trust a client claim):
+    //  - academy admins may change between any assignable roles;
+    //  - ordinary app admins may only make the everyday transitions
+    //    (student <-> parent, student -> coach). Granting Coach from a Parent is
+    //    reserved for academy admins.
     const callerAdmin = await getActiveAcademyAdminAssignment(base44, user.id);
-    if (!callerAdmin) {
-      return Response.json({ error: 'Academy administrator authority required' }, { status: 403 });
+    if (!callerAdmin && !isPlatformAdmin(user)) {
+      return Response.json({ error: 'Administrator authority required' }, { status: 403 });
+    }
+    if (!callerAdmin && !canAppAdminChange(fromRn.value, toRn.value)) {
+      return Response.json(
+        { error: 'Only an Academy Admin can make this role change' },
+        { status: 403 }
+      );
     }
 
     // Validate target user.

@@ -16,6 +16,24 @@ export const ASSIGNABLE_ROLES = ['student', 'parent', 'coach'];
 // Academy-admin role name. Distinct from the built-in platform User.role === 'admin'.
 export const ACADEMY_ADMIN_ROLE = 'admin';
 
+// The only role-to-role transitions an ordinary app admin may perform: an app
+// admin is a platform User with role === 'admin' and NO academy-admin assignment.
+// Granting Coach from a Parent and granting the app Admin role are reserved for
+// academy admins.
+export const APP_ADMIN_CHANGE_TARGETS = {
+  student: ['parent', 'coach'],
+  parent: ['student']
+};
+
+export function canAppAdminChange(fromRoleName, toRoleName) {
+  return (APP_ADMIN_CHANGE_TARGETS[fromRoleName] || []).includes(toRoleName);
+}
+
+// True when the caller holds the built-in platform admin role.
+export function isPlatformAdmin(user) {
+  return !!user && user.role === 'admin';
+}
+
 export function jsonError(status, message, extra) {
   const body = { error: message };
   if (extra) Object.assign(body, extra);
