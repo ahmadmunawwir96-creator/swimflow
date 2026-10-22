@@ -15,8 +15,10 @@ import {
 // Guards:
 //  - Cannot revoke your own academy-admin role (self-protection).
 //  - Cannot revoke the last active academy-admin role (lockout prevention).
-//  - 'admin' role revocation is allowed (to remove an extra admin from a
-//    concurrent bootstrap race) ONLY when more than one active admin remains.
+//  - Student, Parent, Coach, and Academy-Admin roles may all be revoked.
+//  - 'admin' role revocation is allowed (to step down a promoted admin, or to
+//    remove an extra admin from a concurrent bootstrap race) ONLY when more
+//    than one active admin remains.
 //
 // CONCURRENCY LIMITATION: the last-admin guard is read-then-write; two near-
 // simultaneous revokes could each see 2 admins and both proceed, leaving 0.
@@ -44,10 +46,12 @@ export default async function(req) {
     const rn = requireString(input.role_name, 'role_name');
     if (rn.error) return rn.error;
 
-    // Allowable role names: student, parent, and admin (admin revoke for bootstrap-race cleanup).
+    // Allowable role names: student, parent, coach, and admin.
+    // ASSIGNABLE_ROLES now includes 'coach'; ACADEMY_ADMIN_ROLE is added so a
+    // promoted/duplicate academy admin can be removed (last-admin guard applies).
     const allowed = [...ASSIGNABLE_ROLES, ACADEMY_ADMIN_ROLE];
     if (!allowed.includes(rn.value)) {
-      return Response.json({ error: "role_name must be 'student', 'parent', or 'admin'" }, { status: 400 });
+      return Response.json({ error: "role_name must be 'student', 'parent', 'coach', or 'admin'" }, { status: 400 });
     }
 
     // Caller must be an academy admin.

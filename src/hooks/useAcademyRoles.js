@@ -53,6 +53,7 @@ export function useAcademyRoles() {
     error,
     reload: load,
     isAcademyAdmin: roles.includes('admin'),
+    isCoach: roles.includes('coach'),
     isParent: roles.includes('parent'),
     isStudent: roles.includes('student')
   };

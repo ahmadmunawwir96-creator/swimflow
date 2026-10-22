@@ -12,13 +12,24 @@ import {
   TableHead,
   TableCell
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
 import { academyApi } from '@/lib/academy';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Search, ShieldCheck, UserCog, ArrowLeftRight } from 'lucide-react';
+import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown } from 'lucide-react';
 
-// Student <-> Parent change only. Coach/Admin are intentionally not offered.
-const OTHER_ROLE = { student: 'parent', parent: 'student' };
+// Roles an academy admin can switch between via changeAcademyRole.
+// Academy Admin is intentionally NOT here — it is add-only via promote.
+const CHANGE_TARGETS = {
+  student: ['parent', 'coach'],
+  parent: ['student', 'coach'],
+  coach: ['student', 'parent']
+};
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', coach: 'Coach', admin: 'Academy Admin' };
 
 export default function AdminRoles() {
@@ -78,6 +89,22 @@ export default function AdminRoles() {
     }
   };
 
+  const promoteToAdmin = async () => {
+    if (!confirm(`Promote ${found.full_name || found.email} to Academy Admin? Their existing roles are kept.`)) return;
+    setBusy(true);
+    try {
+      await academyApi.promoteToAdmin(found.user_id);
+      toast({ title: 'Promoted to Academy Admin' });
+      setFound(null);
+      setEmail('');
+      loadList();
+    } catch (e) {
+      toast({ title: 'Promotion failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const revoke = async (a) => {
     if (!confirm(`Revoke the ${ROLE_LABEL[a.role_name] || a.role_name} role from this user?`)) return;
     setBusy(true);
@@ -92,8 +119,7 @@ export default function AdminRoles() {
     }
   };
 
-  const changeRole = async (a) => {
-    const to = OTHER_ROLE[a.role_name];
+  const changeRole = async (a, to) => {
     if (!to) return;
     if (!confirm(`Change this user's role from ${ROLE_LABEL[a.role_name]} to ${ROLE_LABEL[to]}?`)) return;
     setBusy(true);
@@ -128,13 +154,16 @@ export default function AdminRoles() {
         <h1 className="text-2xl font-heading font-semibold flex items-center gap-2">
           <ShieldCheck className="h-5 w-5" /> Role administration
         </h1>
-        <p className="text-muted-foreground">Find a member by email and assign or change academy roles.</p>
+        <p className="text-muted-foreground">
+          Assign Student, Parent, or Coach, or promote a trusted member to Academy Admin.
+          Promotion keeps existing roles; the last active Academy Admin cannot be removed.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Search className="h-4 w-4" /> Find a member</CardTitle>
-          <CardDescription>Search by email to assign a Student or Parent role.</CardDescription>
+          <CardDescription>Search by email to assign a role or promote to Academy Admin.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
@@ -147,13 +176,17 @@ export default function AdminRoles() {
             <Button onClick={search} disabled={searching}>{searching ? 'Searching…' : 'Search'}</Button>
           </div>
           {found && (
-            <div className="rounded-md border p-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-md border p-3 space-y-3">
               <div className="text-sm">
                 <span className="font-medium">{found.full_name || 'Unknown'}</span> · {found.email}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => assign('student')} disabled={busy}>Assign Student</Button>
                 <Button size="sm" variant="outline" onClick={() => assign('parent')} disabled={busy}>Assign Parent</Button>
+                <Button size="sm" variant="outline" onClick={() => assign('coach')} disabled={busy}>Assign Coach</Button>
+                <Button size="sm" onClick={promoteToAdmin} disabled={busy}>
+                  <Crown className="h-3.5 w-3.5" /> Promote to Academy Admin
+                </Button>
               </div>
             </div>
           )}
@@ -183,7 +216,7 @@ export default function AdminRoles() {
               </TableHeader>
               <TableBody>
                 {assignments.map((a) => {
-                  const changeable = a.is_active && OTHER_ROLE[a.role_name];
+                  const targets = a.is_active ? CHANGE_TARGETS[a.role_name] : null;
                   return (
                     <TableRow key={a.id} className={a.is_active ? '' : 'opacity-60'}>
                       <TableCell>
@@ -192,7 +225,7 @@ export default function AdminRoles() {
                         </div>
                         <div className="text-xs text-muted-foreground">{a.user_email || a.user_id}</div>
                       </TableCell>
-                      <TableCell><Badge variant="secondary" className="capitalize">{ROLE_LABEL[a.role_name] || a.role_name}</Badge></TableCell>
+                      <TableCell><Badge variant="secondary">{ROLE_LABEL[a.role_name] || a.role_name}</Badge></TableCell>
                       <TableCell>
                         {a.is_active
                           ? <Badge>Active</Badge>
@@ -202,10 +235,21 @@ export default function AdminRoles() {
                       <TableCell className="text-right">
                         {a.is_active ? (
                           <div className="flex justify-end gap-1">
-                            {changeable && (
-                              <Button size="sm" variant="ghost" onClick={() => changeRole(a)} disabled={busy}>
-                                <ArrowLeftRight className="h-3.5 w-3.5" /> Change to {ROLE_LABEL[OTHER_ROLE[a.role_name]]}
-                              </Button>
+                            {targets && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" variant="ghost" disabled={busy}>
+                                    <ArrowLeftRight className="h-3.5 w-3.5" /> Change role <ChevronDown className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {targets.map((to) => (
+                                    <DropdownMenuItem key={to} onSelect={() => changeRole(a, to)}>
+                                      Change to {ROLE_LABEL[to]}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                             <Button size="sm" variant="ghost" onClick={() => revoke(a)} disabled={busy}>Revoke</Button>
                           </div>

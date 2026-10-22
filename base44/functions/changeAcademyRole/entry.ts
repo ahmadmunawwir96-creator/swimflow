@@ -9,11 +9,12 @@ import {
 } from '../../shared/academyRoles.ts';
 
 // Change a user's academy role via a controlled, NON-atomic transition:
-//   1. validate the target role (student|parent)
+//   1. validate the target role (student|parent|coach)
 //   2. deactivate the old assignment (soft — history preserved, never deleted)
 //   3. assign the new role
 // Gate: caller must hold an active academy-admin UserRole.
-// Student <-> Parent only. Coach/Admin are not changeable here.
+// Student / Parent / Coach only. Academy Admin is NOT changeable here — use
+// promoteToAcademyAdmin to promote and revokeAcademyRole to remove an admin.
 //
 // NOT ATOMIC: if step 3 fails after step 2 succeeded, the response reports the
 // actual state (old role now inactive, new role NOT assigned) with a recovery
@@ -40,7 +41,7 @@ export default async function(req) {
     if (toRn.error) return toRn.error;
 
     if (!ASSIGNABLE_ROLES.includes(fromRn.value) || !ASSIGNABLE_ROLES.includes(toRn.value)) {
-      return Response.json({ error: "roles must be 'student' or 'parent'" }, { status: 400 });
+      return Response.json({ error: "roles must be 'student', 'parent', or 'coach'" }, { status: 400 });
     }
     if (fromRn.value === toRn.value) {
       return Response.json({ error: 'The user already has this role' }, { status: 400 });

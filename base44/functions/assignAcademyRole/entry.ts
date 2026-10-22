@@ -9,9 +9,10 @@ import {
   jsonError
 } from '../../shared/academyRoles.ts';
 
-// Assign an academy role ('student' | 'parent') to a target user.
+// Assign an academy role ('student' | 'parent' | 'coach') to a target user.
 // Gate: caller must hold an active academy-admin UserRole.
-// Never writes User.role. Coach/Admin assignment is NOT supported here.
+// Never writes User.role. Academy-Admin assignment is NOT supported here — it
+// has its own protected workflow (promoteToAcademyAdmin).
 
 export default async function(req) {
   try {
@@ -34,10 +35,10 @@ export default async function(req) {
     const rn = requireString(input.role_name, 'role_name');
     if (rn.error) return rn.error;
 
-    // Only student/parent assignable through this function.
+    // Only student/parent/coach assignable through this function.
     if (!ASSIGNABLE_ROLES.includes(rn.value)) {
       return Response.json(
-        { error: "role_name must be 'student' or 'parent'" },
+        { error: "role_name must be 'student', 'parent', or 'coach'" },
         { status: 400 }
       );
     }

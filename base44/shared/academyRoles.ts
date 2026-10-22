@@ -7,11 +7,11 @@ import { asArray } from './studentProfile.ts';
 // Re-export the page/array normalizer under the alias the list function imports.
 export { asArray as asArrayFallback };
 
-// Roles that assignAcademyRole may grant. Student and Parent only for now;
-// Coach and Academy-Admin assignment require a separate, separately-authorized
-// workflow and are intentionally NOT exposed here. The first academy admin
-// comes from bootstrapAcademyAdmin; existing academy admins manage members.
-export const ASSIGNABLE_ROLES = ['student', 'parent'];
+// Roles that assignAcademyRole / changeAcademyRole may grant. Student, Parent,
+// and Coach. Academy-Admin ('admin') is deliberately excluded: promotion to
+// Academy Admin is a separate, separately-gated workflow (promoteToAcademyAdmin),
+// so it can never be granted by the ordinary role-assignment path.
+export const ASSIGNABLE_ROLES = ['student', 'parent', 'coach'];
 
 // Academy-admin role name. Distinct from the built-in platform User.role === 'admin'.
 export const ACADEMY_ADMIN_ROLE = 'admin';
@@ -60,6 +60,20 @@ export async function getActiveAssignment(base44, userId, roleId) {
     { limit: 1 }
   );
   return asArray(page)[0] || null;
+}
+
+// Resolve an active assignment for (user, role NAME). Returns record or null.
+// Generic helper for server-side gates on any academy role.
+export async function getActiveRoleAssignment(base44, userId, roleName) {
+  const roleRes = await findRoleByName(base44, roleName);
+  if (roleRes.error) return null;
+  return getActiveAssignment(base44, userId, roleRes.role.id);
+}
+
+// Convenience gate for future coach-scoped functions (class assignment,
+// attendance management). Coach grants NO academy-admin authority.
+export async function getActiveCoachAssignment(base44, userId) {
+  return getActiveRoleAssignment(base44, userId, 'coach');
 }
 
 // Resolve a target User by id via service role. Returns { user } or { error: 404 }.
