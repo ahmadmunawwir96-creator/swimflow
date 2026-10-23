@@ -22,6 +22,8 @@ const ROLE_LABELS = {
 export default function Dashboard() {
   const { user } = useAuth();
   const { roles, isAcademyAdmin, isParent, loading } = useAcademyRoles();
+  const isAppAdmin = user?.role === 'admin';
+  const canManageRoles = isAcademyAdmin || isAppAdmin;
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
@@ -88,11 +90,13 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {isAcademyAdmin && (
+        {canManageRoles && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4" /> Role administration</CardTitle>
-              <CardDescription>Assign or revoke academy roles</CardDescription>
+              <CardDescription>
+                {isAcademyAdmin ? 'Assign, change, or revoke academy roles' : 'Change members between Student, Parent, and Coach'}
+              </CardDescription>
             </CardHeader>
             <CardContent><Button asChild size="sm"><Link to="/admin-roles">Manage roles</Link></Button></CardContent>
           </Card>

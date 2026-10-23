@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 export default function Layout() {
   const { user, logout } = useAuth();
   const { isAcademyAdmin, isParent, isStudent } = useAcademyRoles();
+  // An app admin reaches the same role-management page, so the link must show
+  // for them too (the page and every backend call re-check authority).
+  const isAppAdmin = user?.role === 'admin';
   const navigate = useNavigate();
 
   const linkClass = ({ isActive }) =>
@@ -30,12 +33,14 @@ export default function Layout() {
             <NavLink to="/" className={linkClass} end>
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </NavLink>
-            {(isParent || isStudent) && !isAcademyAdmin && (
+            {/* Academy Admin is additive — a promoted parent/coach keeps their
+                own swimmer profiles. Never hide this from them. */}
+            {(isParent || isStudent) && (
               <NavLink to="/my-profile" className={linkClass}>
                 <User className="h-4 w-4" /> My Profiles
               </NavLink>
             )}
-            {isAcademyAdmin && (
+            {(isAcademyAdmin || isAppAdmin) && (
               <NavLink to="/admin-roles" className={linkClass}>
                 <Users className="h-4 w-4" /> Roles
               </NavLink>

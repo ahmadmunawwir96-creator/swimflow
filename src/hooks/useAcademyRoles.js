@@ -2,13 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
-function pageItems(p) {
-  return Array.isArray(p) ? p : (p?.items || []);
-}
-
-// Loads the current user's active academy roles via client SDK.
-// Reads UserRole (RLS permits owner read) and Role (read open) — no new backend
-// function needed. UI aid only; all privileged writes stay server-gated.
+// Loads the current user's active academy roles from the backend.
+//
+// Why a backend function instead of two client reads: the previous version
+// filtered UserRole + Role directly from the browser. Any read that failed or
+// came back empty silently produced roles = [] — so a promoted Academy Admin
+// simply lost the admin navigation and dashboard options with no error shown,
+// and the result could differ between a refresh and a fresh login. The function
+// resolves the same records server-side with the service role, so recognition is
+// consistent and matches exactly what the server gates check.
+//
+// UI aid only; every privileged write stays server-gated.
 export function useAcademyRoles() {
   const { user, isAuthenticated } = useAuth();
   const [roles, setRoles] = useState([]);
@@ -23,17 +27,9 @@ export function useAcademyRoles() {
     }
     setLoading(true);
     try {
-      const urPage = await base44.entities.UserRole.filter(
-        { user_id: user.id, is_active: true },
-        { limit: 100 }
-      );
-      const rolePage = await base44.entities.Role.filter({}, { limit: 100 });
-      const roleMap = {};
-      for (const r of pageItems(rolePage)) roleMap[r.id] = r.name;
-      const names = pageItems(urPage)
-        .map((a) => roleMap[a.role_id])
-        .filter(Boolean);
-      setRoles(names);
+      const res = await base44.functions.invoke('getMyAcademyRoles', {});
+      const next = Array.isArray(res?.data?.roles) ? res.data.roles : [];
+      setRoles(next);
       setError(null);
     } catch (e) {
       setError(e);
