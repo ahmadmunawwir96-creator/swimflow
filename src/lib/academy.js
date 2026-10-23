@@ -10,7 +10,11 @@ async function call(name, payload) {
     return res.data;
   } catch (e) {
     const msg = e?.response?.data?.error || e?.message || 'Unexpected error';
-    throw new Error(msg);
+    // Carry the HTTP status so screens can tell a permission refusal (401/403)
+    // apart from a transient failure (500) instead of treating both as "denied".
+    const err = new Error(msg);
+    err.status = e?.response?.status ?? null;
+    throw err;
   }
 }
 
@@ -28,6 +32,7 @@ export const academyApi = {
     call('grantAppAdmin', { target_user_id }),
   listRoles: (target_user_id) =>
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
+  listStudents: (params) => call('listStudents', params || {}),
   createSelfProfile: (values) => call('createMyStudentProfile', values),
   createDependentProfile: (values) => call('createDependentStudentProfile', values),
   updateMyProfile: (values) => call('updateMyStudentProfile', values),

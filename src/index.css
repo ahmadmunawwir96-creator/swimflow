@@ -29,6 +29,11 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --brand: 212 88% 38%;
+    --brand-foreground: 0 0% 100%;
+    --brand-soft: 208 100% 96%;
+    --sun: 44 96% 52%;
+    --sun-foreground: 30 45% 16%;
     --font-heading: ui-sans-serif, system-ui, sans-serif;
     --font-body: ui-sans-serif, system-ui, sans-serif;
     --font-display: ui-sans-serif, system-ui, sans-serif;
@@ -76,6 +81,11 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --brand: 205 92% 62%;
+    --brand-foreground: 214 60% 10%;
+    --brand-soft: 214 40% 18%;
+    --sun: 44 92% 58%;
+    --sun-foreground: 30 45% 12%;
   }
 }
 

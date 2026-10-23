@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Waves, LayoutDashboard, User, Users, LogOut } from 'lucide-react';
+import { Waves, LayoutDashboard, User, Users, LogOut, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useAcademyRoles } from '@/hooks/useAcademyRoles';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,13 @@ export default function Layout() {
             {(isAcademyAdmin || isAppAdmin) && (
               <NavLink to="/admin-roles" className={linkClass}>
                 <Users className="h-4 w-4" /> Roles
+              </NavLink>
+            )}
+            {/* The directory is Academy Admin only — the server refuses the
+                built-in platform admin, so the link is not shown to them. */}
+            {isAcademyAdmin && (
+              <NavLink to="/admin-students" className={linkClass}>
+                <GraduationCap className="h-4 w-4" /> Swimmers
               </NavLink>
             )}
           </nav>
