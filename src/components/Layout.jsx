@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { isAcademyAdmin, isParent, isStudent } = useAcademyRoles();
+  const { isAcademyAdmin, isParent, isStudent, error: rolesError, reload: reloadRoles } = useAcademyRoles();
   // An app admin reaches the same role-management page, so the link must show
   // for them too (the page and every backend call re-check authority).
   const isAppAdmin = user?.role === 'admin';
@@ -47,6 +47,13 @@ export default function Layout() {
             )}
           </nav>
           <div className="flex items-center gap-2">
+            {/* Role lookup failure must be visible — otherwise a promoted admin
+                silently loses their admin navigation with no explanation. */}
+            {rolesError && (
+              <Button variant="ghost" size="sm" className="text-destructive" onClick={reloadRoles}>
+                Roles unavailable — retry
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground hidden sm:inline">{user?.display_name || user?.full_name || user?.email}</span>
             <Button variant="outline" size="sm" onClick={() => logout()}>
               <LogOut className="h-4 w-4" /> Logout

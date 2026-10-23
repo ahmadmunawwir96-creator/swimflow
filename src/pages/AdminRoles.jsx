@@ -22,7 +22,7 @@ import {
 import { academyApi } from '@/lib/academy';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown } from 'lucide-react';
+import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown, AlertTriangle } from 'lucide-react';
 
 // Academy admins may move a member between any academy role. 'app_admin' is the
 // built-in app Admin role, granted additively (academy admins only).
@@ -41,7 +41,7 @@ const APP_ADMIN_TARGETS = {
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', coach: 'Coach', admin: 'Academy Admin' };
 
 export default function AdminRoles() {
-  const { isAcademyAdmin, loading: rolesLoading } = useAcademyRoles();
+  const { isAcademyAdmin, loading: rolesLoading, error: rolesError, reload: reloadRoles } = useAcademyRoles();
   const { user } = useAuth();
   const { toast } = useToast();
   const isAppAdmin = user?.role === 'admin';
@@ -173,6 +173,23 @@ export default function AdminRoles() {
   };
 
   if (rolesLoading) return <p className="text-muted-foreground">Loading…</p>;
+  // A failed role lookup must never read as "you are not an administrator".
+  if (rolesError) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center space-y-3">
+          <p className="font-medium flex items-center justify-center gap-2">
+            <AlertTriangle className="h-4 w-4" /> Could not verify your permissions
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Your academy roles could not be loaded, so no role changes can be made right now.
+            This is a loading failure, not a permission denial.
+          </p>
+          <Button size="sm" onClick={reloadRoles}>Try again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!canManage) {
     return (
       <Card>

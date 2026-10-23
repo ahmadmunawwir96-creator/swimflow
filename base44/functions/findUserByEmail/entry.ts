@@ -2,12 +2,15 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import {
   findUserByEmail as findUser,
   getActiveAcademyAdminAssignment,
+  isPlatformAdmin,
   requireEmail,
   publicUser
 } from '../../shared/academyRoles.ts';
 
 // Look up a user by email for the admin role-assignment UI.
-// Academy-admin gated. Returns only { user_id, email, full_name }.
+// Gate: academy admin OR the built-in app admin role — the same authority the
+// role-assignment screen and assignAcademyRole accept, so the page never offers
+// a search the server then refuses. Returns only { user_id, email, full_name }.
 // Uses a narrow email filter — never enumerates users.
 
 export default async function(req) {
@@ -16,10 +19,9 @@ export default async function(req) {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    // Academy-admin gate.
     const callerAdmin = await getActiveAcademyAdminAssignment(base44, user.id);
-    if (!callerAdmin) {
-      return Response.json({ error: 'Academy administrator authority required' }, { status: 403 });
+    if (!callerAdmin && !isPlatformAdmin(user)) {
+      return Response.json({ error: 'Administrator authority required' }, { status: 403 });
     }
 
     let input;
