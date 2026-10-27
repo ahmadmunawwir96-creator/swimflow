@@ -15,6 +15,7 @@ import CreateDependent from '@/pages/CreateDependent';
 import MyProfile from '@/pages/MyProfile';
 import AdminRoles from '@/pages/AdminRoles';
 import AdminStudents from '@/pages/AdminStudents';
+import AdminStudentProfile from '@/pages/AdminStudentProfile';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
           <Route path="/my-profile" element={<MyProfile />} />
           <Route path="/admin-roles" element={<AdminRoles />} />
           <Route path="/admin-students" element={<AdminStudents />} />
+          <Route path="/admin/students/:id" element={<AdminStudentProfile />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

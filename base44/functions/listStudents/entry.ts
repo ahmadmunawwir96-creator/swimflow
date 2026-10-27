@@ -16,14 +16,9 @@ import {
   jsonError,
   DIRECTORY_ALLOWED_PARAMS
 } from '../../shared/directoryAccess.ts';
-import {
-  resolveAdminBranchScope,
-  listActiveBranches,
-  isScopeEmpty,
-  branchesInScope
-} from '../../shared/adminScope.ts';
+import { resolveAdminBranchScope, isScopeEmpty } from '../../shared/adminScope.ts';
 
-// Read-only academy-wide swimmer directory.
+// Read-only swimmer directory, limited to the caller's authorized branches.
 //
 // Authorization runs BEFORE any elevated database access: an active Academy Admin
 // assignment is resolved server-side from the verified session, so an ordinary
@@ -72,7 +67,7 @@ export default async function(req) {
     // Scope comes from the caller's own records, never from the request.
     const scope = await resolveAdminBranchScope(base44, auth.user.id);
     if (isScopeEmpty(scope)) {
-      return jsonError(403, 'No branch is assigned to your administrator account');
+      return jsonError(403, 'No branch is assigned to your admin account');
     }
     if (branchFilter.value && !scope.branchIds.includes(branchFilter.value)) {
       return jsonError(403, 'That branch is not in your administrator scope');
@@ -106,7 +101,9 @@ export default async function(req) {
       throw e;
     }
 
-    const activeBranches = await listActiveBranches(base44);
+    // Reuse the Branch records the scope resolver already read — an identical
+    // active-Branch query here would be a wasted round trip on every page load.
+    const activeBranches = scope.branches || [];
     const namesById = {};
     activeBranches.forEach((b) => {
       namesById[b.id] = b.name;
@@ -121,7 +118,8 @@ export default async function(req) {
         applied: { search: search.value, status: status.value, branch_id: branchFilter.value },
         // Lets the screen offer the branch filter from authorized values only.
         scope: { all_branches: scope.allBranches, branch_ids: scope.branchIds },
-        branches: branchesInScope(scope, activeBranches).map((b) => ({
+        // Already the authorized subset — never a branch outside the caller's scope.
+        branches: activeBranches.map((b) => ({
           id: b.id,
           name: b.name,
           code: b.code || null

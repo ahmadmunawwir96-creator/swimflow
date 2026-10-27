@@ -33,6 +33,7 @@ export const academyApi = {
   listRoles: (target_user_id) =>
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
   listStudents: (params) => call('listStudents', params || {}),
+  getStudent: (studentId) => call('getStudent', { student_id: studentId }),
   createSelfProfile: (values) => call('createMyStudentProfile', values),
   createDependentProfile: (values) => call('createDependentStudentProfile', values),
   updateMyProfile: (values) => call('updateMyStudentProfile', values),

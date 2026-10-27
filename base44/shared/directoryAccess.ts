@@ -41,6 +41,21 @@ export function serverFailure(scope) {
   return jsonError(500, 'This information could not be loaded right now. Please try again.');
 }
 
+// True ONLY when the SDK reported that the record does not exist.
+//
+// This is deliberately strict. Treating every thrown error as "not found" turns a
+// rate limit, a database outage or an SDK failure into "this student does not
+// exist" — the screen then tells staff the swimmer is gone when the real problem
+// is temporary. Any error that is not a genuine 404 must reach the generic server
+// failure handler instead.
+export function isNotFoundError(e) {
+  if (!e) return false;
+  const status = e.status || e.statusCode || (e.response && e.response.status);
+  if (status === 404) return true;
+  const code = typeof e.code === 'string' ? e.code.toLowerCase() : '';
+  return code === 'not_found' || code === 'notfound';
+}
+
 // 1. Trusted identity. The caller id comes from the verified session, never a body field.
 export async function authenticateCaller(base44) {
   let user;
@@ -56,7 +71,7 @@ export async function authenticateCaller(base44) {
 // 2. Academy-admin gate. Returns the caller's active assignment, or a 403.
 export async function authorizeAcademyAdmin(base44, user) {
   const assignment = await getActiveAcademyAdminAssignment(base44, user.id);
-  if (!assignment) return { error: jsonError(403, 'Academy administrator authority required') };
+  if (!assignment) return { error: jsonError(403, 'Admins only') };
   return { assignment };
 }
 

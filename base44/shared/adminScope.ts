@@ -6,9 +6,13 @@
 // the AdminBranchAssignment rows written by assignAdminBranches.
 //
 // Result shape (always one of these):
-//   all-branches Admin -> { allBranches: true,  branchIds: [...active branch ids] }
-//   specific branches  -> { allBranches: false, branchIds: ["...", "..."] }
-//   no active scope    -> { allBranches: false, branchIds: [] }   <- fails closed
+//   all-branches Admin -> { allBranches: true,  branchIds: [...], branches: [...active] }
+//   specific branches  -> { allBranches: false, branchIds: [...], branches: [...in scope] }
+//   no active scope    -> { allBranches: false, branchIds: [],    branches: [] } <- fails closed
+//
+// `branches` carries the Branch records the resolver has ALREADY read, so a caller
+// never repeats an identical active-Branch query just to look up a branch name.
+// It is the authorized subset only: never a branch outside scope.
 //
 // allBranches stays a FLAG instead of being flattened into a stored list:
 // branchIds is recomputed from the currently active Branches on every call, so a
@@ -16,7 +20,7 @@
 
 import { asArray } from './studentProfile.ts';
 
-export const EMPTY_SCOPE = { allBranches: false, branchIds: [] };
+export const EMPTY_SCOPE = { allBranches: false, branchIds: [], branches: [] };
 
 export async function listActiveBranches(base44) {
   const page = await base44.asServiceRole.entities.Branch.filter({ is_active: true }, { limit: 200 });
@@ -31,12 +35,14 @@ export async function resolveAdminBranchScope(base44, userId) {
     { limit: 200 }
   );
   const rows = asArray(page);
+  // Read once. Callers receive these records in `branches`, so a directory request
+  // does not run a second, identical active-Branch query afterwards.
   const activeBranches = await listActiveBranches(base44);
   const activeIds = activeBranches.map((b) => b.id);
 
   // One active all-branches row covers every active branch, now and in future.
   if (rows.some((r) => r.all_branches === true)) {
-    return { allBranches: true, branchIds: [...activeIds].sort() };
+    return { allBranches: true, branchIds: [...activeIds].sort(), branches: activeBranches };
   }
 
   const requested = [
@@ -44,7 +50,12 @@ export async function resolveAdminBranchScope(base44, userId) {
   ];
   // A deactivated branch drops out of scope automatically, and duplicates cannot
   // widen anything — both are handled here rather than at each call site.
-  return { allBranches: false, branchIds: requested.filter((id) => activeIds.includes(id)).sort() };
+  const branchIds = requested.filter((id) => activeIds.includes(id)).sort();
+  return {
+    allBranches: false,
+    branchIds,
+    branches: activeBranches.filter((b) => branchIds.includes(b.id))
+  };
 }
 
 export function isScopeEmpty(scope) {

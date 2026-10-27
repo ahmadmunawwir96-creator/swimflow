@@ -16,7 +16,7 @@ export default function AdminStudents() {
           <Users className="h-5 w-5 text-brand" /> Student directory
         </h1>
         <p className="text-muted-foreground">
-          Swimmer profiles across the academy, managed by each swimmer or their parent or guardian.
+          Find a swimmer in your authorized branches and open their profile.
         </p>
       </div>
 
@@ -33,8 +33,8 @@ export default function AdminStudents() {
       ) : !isAcademyAdmin ? (
         <DirectoryNotice
           icon={<ShieldAlert className="h-6 w-6" />}
-          title="Academy administrators only"
-          description="Only an Academy Admin can browse academy-wide swimmer profiles."
+          title="Admins only"
+          description="Only an admin can browse swimmer profiles."
         />
       ) : (
         <StudentDirectory />

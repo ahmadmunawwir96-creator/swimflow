@@ -6,9 +6,10 @@ import {
   rejectUnknownParams,
   jsonError,
   serverFailure,
+  isNotFoundError,
   projectStudentDetail
 } from '../../shared/directoryAccess.ts';
-import { resolveAdminBranchScope, listActiveBranches, isStudentInScope, isScopeEmpty } from '../../shared/adminScope.ts';
+import { resolveAdminBranchScope, isStudentInScope, isScopeEmpty } from '../../shared/adminScope.ts';
 import { requireString } from '../../shared/academyRoles.ts';
 
 // Admin-facing profile of ONE student.
@@ -48,14 +49,18 @@ export default async function(req) {
 
     const scope = await resolveAdminBranchScope(base44, auth.user.id);
     if (isScopeEmpty(scope)) {
-      return jsonError(403, 'No branch is assigned to your administrator account');
+      return jsonError(403, 'No branch is assigned to your admin account');
     }
 
+    // ONLY a genuine record-not-found may become a 404. A rate limit, a database or
+    // SDK failure is rethrown to the outer handler, which answers with the generic
+    // server failure — so a temporary outage never reads as "student does not exist".
     let student;
     try {
       student = await base44.asServiceRole.entities.Student.get(sid.value);
-    } catch {
-      return jsonError(404, 'Student not found');
+    } catch (e) {
+      if (isNotFoundError(e)) return jsonError(404, 'Student not found');
+      throw e;
     }
     if (!student || !student.id) return jsonError(404, 'Student not found');
 
@@ -63,8 +68,8 @@ export default async function(req) {
       return jsonError(404, 'Student not found');
     }
 
-    const activeBranches = await listActiveBranches(base44);
-    const branch = activeBranches.find((b) => b.id === student.home_branch_id);
+    // Branches were already read by the scope resolver — no second identical query.
+    const branch = (scope.branches || []).find((b) => b.id === student.home_branch_id);
 
     return Response.json(
       {

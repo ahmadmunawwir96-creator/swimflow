@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/select';
 import DirectoryNotice from '@/components/students/DirectoryNotice';
 import StudentTable from '@/components/students/StudentTable';
-import { Search, Users, ShieldAlert, RefreshCw } from 'lucide-react';
+import StudentCardList from '@/components/students/StudentCardList';
+import { Search, Users, ShieldAlert, RefreshCw, AlertTriangle } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 const STATUS_OPTIONS = [
@@ -37,11 +38,13 @@ export default function StudentDirectory() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [moreError, setMoreError] = useState(null);
   const [denied, setDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMoreError(null);
     setDenied(false);
     try {
       const res = await academyApi.listStudents({
@@ -73,7 +76,7 @@ export default function StudentDirectory() {
   const loadMore = async () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
-    setError(null);
+    setMoreError(null);
     try {
       const res = await academyApi.listStudents({
         search: query.search,
@@ -86,7 +89,8 @@ export default function StudentDirectory() {
       setCursor(res?.next_cursor || null);
       setHasMore(!!res?.has_more);
     } catch (e) {
-      setError(e.message || 'More swimmers could not be loaded.');
+      // Keeps the swimmers already on screen — only the extra page failed.
+      setMoreError(e.message || 'More swimmers could not be loaded right now.');
     } finally {
       setLoadingMore(false);
     }
@@ -108,11 +112,10 @@ export default function StudentDirectory() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="h-4 w-4 text-brand" /> Swimmer profiles
+          <Users className="h-4 w-4 text-brand" /> Students
         </CardTitle>
         <CardDescription>
-          Academy-wide directory. Medical notes, emergency contacts and payment details are not
-          shown here.
+          Swimmers in your authorized branches. Open a swimmer to see their full profile.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -164,13 +167,13 @@ export default function StudentDirectory() {
         ) : denied ? (
           <DirectoryNotice
             icon={<ShieldAlert className="h-6 w-6" />}
-            title="Academy administrators only"
-            description="You do not have permission to browse academy-wide swimmer profiles."
+            title="Admins only"
+            description="You do not have permission to browse swimmer profiles."
           />
         ) : error ? (
           <DirectoryNotice
             icon={<ShieldAlert className="h-6 w-6 text-destructive" />}
-            title="Directory unavailable"
+            title="Directory temporarily unavailable"
             description={error}
             actionLabel="Try again"
             onAction={load}
@@ -202,11 +205,31 @@ export default function StudentDirectory() {
                 </span>
               )}
             </div>
-            <StudentTable students={students} />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {hasMore && (
+            {/* Phone: compact list, no horizontal scrolling. Tablet and up: the table. */}
+            <div className="md:hidden">
+              <StudentCardList students={students} />
+            </div>
+            <div className="hidden md:block">
+              <StudentTable students={students} />
+            </div>
+            {moreError && (
+              <div className="flex flex-col items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4" /> {moreError}
+                </p>
+                <Button size="sm" variant="outline" onClick={loadMore}>
+                  Try again
+                </Button>
+              </div>
+            )}
+            {hasMore && !moreError && (
               <div className="flex justify-center">
-                <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="w-full sm:w-auto"
+                >
                   {loadingMore ? 'Loading…' : 'Load more swimmers'}
                 </Button>
               </div>
