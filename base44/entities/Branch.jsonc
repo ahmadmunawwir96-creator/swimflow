@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Branch name. A Branch is the business/administrative unit and the authorization boundary, not a physical pool (a Branch may have several Locations)."
+    },
+    "code": {
+      "type": "string",
+      "description": "Short human-readable code for the branch (e.g. 'BKT'). Uniqueness is enforced in backend logic, not by the schema."
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether the branch is active. Inactive branches cannot be assigned as Admin scope or selected as a swimmer's home branch.",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes about the branch"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "name": "Branch",
+  "type": "object"
+}

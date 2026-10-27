@@ -4,6 +4,10 @@
       "type": "string",
       "description": "Reference to the owning User account. For a self-managed student this is the swimmer themselves; for a parent-managed swimmer this is the parent/guardian."
     },
+    "home_branch_id": {
+      "type": "string",
+      "description": "Reference to the Branch that manages this swimmer (their home/management branch). This is NOT the branch of every class the swimmer attends: cross-branch booking is supported, so a swimmer managed by Branch A may legitimately attend a class held by Branch B. Optional only so existing swimmers can be mapped during migration."
+    },
     "ownership_type": {
       "type": "string",
       "description": "Whether the owning account is the swimmer themselves or a parent/guardian managing on their behalf",

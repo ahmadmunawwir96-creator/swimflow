@@ -75,7 +75,9 @@ export default function AdminRoles() {
     if (!a.is_active) return [];
     const matrix = isAcademyAdmin ? ACADEMY_ADMIN_TARGETS : APP_ADMIN_TARGETS;
     const base = matrix[a.role_name] || [];
-    const canGrantAdmin = isAcademyAdmin && (a.role_name === 'student' || a.role_name === 'parent');
+    // Platform Admin is system-owner authority only — a Swimflow Admin never sees
+    // this option, and the server refuses it regardless of the UI.
+    const canGrantAdmin = isAppAdmin && (a.role_name === 'student' || a.role_name === 'parent');
     return canGrantAdmin ? [...base, 'app_admin'] : base;
   };
 

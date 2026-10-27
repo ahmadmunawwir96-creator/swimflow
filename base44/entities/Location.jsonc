@@ -2,7 +2,11 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "Location/branch name (e.g. academy pool name)"
+      "description": "Location name \u2014 the physical venue/pool (academy pool, external pool, condominium pool). Not a business branch."
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Reference to the Branch this venue belongs to. A Branch may have several Locations. Optional only so existing locations can be mapped during migration; new locations must be given a branch."
     },
     "address": {
       "type": "string",

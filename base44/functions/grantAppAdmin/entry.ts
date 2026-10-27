@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import {
   findUserById,
-  getActiveAcademyAdminAssignment,
+  isPlatformAdmin,
   getActiveRoleAssignment,
   requireString
 } from '../../shared/academyRoles.ts';
@@ -10,7 +10,9 @@ import {
 // This is the platform app role, NOT the academy-admin UserRole.
 //
 // Gates (server-side; the UI is never the boundary):
-//  - Caller must hold an ACTIVE academy-admin assignment.
+//  - Caller must hold PLATFORM owner authority (User.role === 'admin'). A Swimflow
+//    academy Admin must never be able to grant platform authority: platform access
+//    is infrastructure/recovery, not a business capability.
 //  - Only a member holding an active Student or Parent role may be promoted.
 //  - No self-promotion, and no duplicate promotion.
 //
@@ -32,9 +34,8 @@ export default async function(req) {
     const tid = requireString(input.target_user_id, 'target_user_id');
     if (tid.error) return tid.error;
 
-    const callerAdmin = await getActiveAcademyAdminAssignment(base44, user.id);
-    if (!callerAdmin) {
-      return Response.json({ error: 'Academy administrator authority required' }, { status: 403 });
+    if (!isPlatformAdmin(user)) {
+      return Response.json({ error: 'System-owner authority required' }, { status: 403 });
     }
 
     const { user: target, error: notFound } = await findUserById(base44, tid.value);

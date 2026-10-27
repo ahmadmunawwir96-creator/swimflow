@@ -1,0 +1,65 @@
+{
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Reference to the User this branch scope applies to. The user must hold an active Admin UserRole."
+    },
+    "all_branches": {
+      "type": "boolean",
+      "description": "When true the Admin covers every active branch, including branches created in the future. In this mode branch_id MUST be empty. When false, branch_id is required. Exactly one of the two modes is valid; the invariant is enforced server-side in the assignAdminBranches function, never by the client.",
+      "default": false
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Specific Branch id. Required when all_branches is false; must be empty when all_branches is true."
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether this scope assignment is currently in force. Superseded assignments are deactivated, never deleted, so history is preserved.",
+      "default": true
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "Reference to the system owner User who set this scope"
+    },
+    "assigned_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this scope was assigned"
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "name": "AdminBranchAssignment",
+  "type": "object"
+}

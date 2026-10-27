@@ -1,0 +1,59 @@
+{
+  "properties": {
+    "action": {
+      "type": "string",
+      "description": "Machine-readable action name, e.g. 'admin_branch_scope_set', 'role_changed', 'student_status_changed', 'token_adjustment'"
+    },
+    "actor_user_id": {
+      "type": "string",
+      "description": "Reference to the User who performed the action"
+    },
+    "actor_email": {
+      "type": "string",
+      "description": "Email of the acting user at the time of the action (snapshot for audit durability)"
+    },
+    "target_type": {
+      "type": "string",
+      "description": "Entity type the action applies to, e.g. 'user', 'student', 'payment', 'token_transaction'"
+    },
+    "target_id": {
+      "type": "string",
+      "description": "Record id the action applies to"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Branch the action took place in, when the action is branch-scoped"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Short human-readable description of what changed"
+    },
+    "details": {
+      "type": "string",
+      "description": "Optional JSON snapshot of before/after values. Stored as a string to keep records small and immutable."
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": false
+  },
+  "name": "AuditLog",
+  "type": "object"
+}
