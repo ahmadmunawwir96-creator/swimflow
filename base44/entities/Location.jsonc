@@ -1,28 +1,39 @@
 {
+  "name": "Location",
+  "type": "object",
   "properties": {
     "name": {
       "type": "string",
-      "description": "Location name \u2014 the physical venue/pool (academy pool, external pool, condominium pool). Not a business branch."
+      "description": "Venue name \u2014 the physical pool where classes take place (academy pool, condominium pool, external pool). Not a business branch."
     },
     "branch_id": {
       "type": "string",
-      "description": "Reference to the Branch this venue belongs to. A Branch may have several Locations. Optional only so existing locations can be mapped during migration; new locations must be given a branch."
+      "description": "Reference to the Branch this venue belongs to. A Branch may have several venues. Required: the venue's branch is what grants an Admin access to its classes."
     },
     "address": {
       "type": "string",
-      "description": "Location address"
+      "description": "Optional address or short venue description shown to staff and members."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional internal notes about the venue (access, parking, entry instructions). Not shown to members."
     },
     "is_active": {
       "type": "boolean",
-      "description": "Whether the location is active",
+      "description": "Whether the venue can be used for new classes. Venues are deactivated, never deleted, so historical classes keep their venue.",
       "default": true
     }
   },
   "required": [
-    "name"
+    "name",
+    "branch_id"
   ],
   "rls": {
-    "read": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "create": {
       "user_condition": {
         "role": "admin"
@@ -38,7 +49,5 @@
         "role": "admin"
       }
     }
-  },
-  "name": "Location",
-  "type": "object"
+  }
 }

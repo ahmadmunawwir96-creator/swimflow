@@ -16,6 +16,10 @@ import MyProfile from '@/pages/MyProfile';
 import AdminRoles from '@/pages/AdminRoles';
 import AdminStudents from '@/pages/AdminStudents';
 import AdminStudentProfile from '@/pages/AdminStudentProfile';
+import AdminClasses from '@/pages/AdminClasses';
+import AdminClassDetail from '@/pages/AdminClassDetail';
+import AdminClassEditor from '@/pages/AdminClassEditor';
+import MemberClasses from '@/pages/MemberClasses';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -61,6 +65,11 @@ const AuthenticatedApp = () => {
           <Route path="/admin-roles" element={<AdminRoles />} />
           <Route path="/admin-students" element={<AdminStudents />} />
           <Route path="/admin/students/:id" element={<AdminStudentProfile />} />
+          <Route path="/admin/classes" element={<AdminClasses />} />
+          <Route path="/admin/classes/new" element={<AdminClassEditor />} />
+          <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
+          <Route path="/admin/classes/:id/edit" element={<AdminClassEditor />} />
+          <Route path="/classes" element={<MemberClasses />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

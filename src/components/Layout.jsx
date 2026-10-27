@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Waves, LayoutDashboard, User, Users, LogOut, GraduationCap } from 'lucide-react';
+import { Waves, LayoutDashboard, User, Users, LogOut, GraduationCap, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useAcademyRoles } from '@/hooks/useAcademyRoles';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,18 @@ export default function Layout() {
             {isAcademyAdmin && (
               <NavLink to="/admin-students" className={linkClass}>
                 <GraduationCap className="h-4 w-4" /> Swimmers
+              </NavLink>
+            )}
+            {isAcademyAdmin && (
+              <NavLink to="/admin/classes" className={linkClass}>
+                <CalendarDays className="h-4 w-4" /> Schedule
+              </NavLink>
+            )}
+            {/* Members get the read-only timetable. Coaches get no schedule link
+                yet — their own view is a later phase. */}
+            {(isParent || isStudent) && (
+              <NavLink to="/classes" className={linkClass}>
+                <CalendarDays className="h-4 w-4" /> Classes
               </NavLink>
             )}
           </nav>

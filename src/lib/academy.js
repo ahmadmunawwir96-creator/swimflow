@@ -14,6 +14,8 @@ async function call(name, payload) {
     // apart from a transient failure (500) instead of treating both as "denied".
     const err = new Error(msg);
     err.status = e?.response?.status ?? null;
+    // The body carries safe extras (e.g. schedule conflicts needing confirmation).
+    err.data = e?.response?.data ?? null;
     throw err;
   }
 }
@@ -34,6 +36,13 @@ export const academyApi = {
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
   listStudents: (params) => call('listStudents', params || {}),
   getStudent: (studentId) => call('getStudent', { student_id: studentId }),
+  getScheduleOptions: () => call('getScheduleOptions', {}),
+  listClasses: (params) => call('listClasses', params || {}),
+  getClass: (classId) => call('getClass', { class_id: classId }),
+  saveClass: (values) => call('saveClass', values),
+  cancelClass: (classId, options) => call('cancelClass', { class_id: classId, ...(options || {}) }),
+  saveLocation: (values) => call('saveLocation', values),
+  listMemberClasses: (params) => call('listMemberClasses', params || {}),
   createSelfProfile: (values) => call('createMyStudentProfile', values),
   createDependentProfile: (values) => call('createDependentStudentProfile', values),
   updateMyProfile: (values) => call('updateMyStudentProfile', values),

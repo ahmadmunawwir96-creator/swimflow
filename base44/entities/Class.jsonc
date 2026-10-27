@@ -1,37 +1,52 @@
 {
+  "name": "Class",
+  "type": "object",
   "properties": {
     "name": {
       "type": "string",
-      "description": "Class name"
-    },
-    "coach_id": {
-      "type": "string",
-      "description": "Reference to the coach User taking the class"
-    },
-    "location_id": {
-      "type": "string",
-      "description": "Reference to the Location/branch where the class is held"
+      "description": "Readable label shown to staff and members, e.g. 'Beginner class'. The backend supplies a default derived from the level when the admin leaves it blank, so this stays required."
     },
     "class_date": {
       "type": "string",
       "format": "date",
-      "description": "Date of the class"
+      "description": "Calendar date of this single scheduled session (YYYY-MM-DD). One record represents one session; there is no recurrence engine."
     },
     "start_time": {
       "type": "string",
-      "description": "Start time of the class"
+      "description": "Start time in 24-hour HH:MM, academy local time."
     },
     "end_time": {
       "type": "string",
-      "description": "End time of the class"
+      "description": "End time in 24-hour HH:MM. Required in practice because overlap detection depends on it."
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Physical venue/pool where the session takes place. The session's Branch is derived from this venue server-side, never supplied by the browser."
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Server-derived snapshot of the venue's Branch at write time (authorization boundary + display). Never accepted from the client."
+    },
+    "coach_id": {
+      "type": "string",
+      "description": "Optional coach User taking the session. Validated server-side to hold an active Coach role. Empty means no coach assigned yet."
+    },
+    "skill_level": {
+      "type": "string",
+      "description": "Level the session is aimed at. Deliberately the same values as Student.swimming_level so a swimmer's level maps onto classes without translation.",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
     },
     "max_capacity": {
       "type": "number",
-      "description": "Maximum number of students that can book the class"
+      "description": "Maximum swimmers for the session. Stored only in this phase; nothing is reserved or deducted because booking does not exist yet."
     },
     "status": {
       "type": "string",
-      "description": "Class status",
+      "description": "Session state. 'cancelled' records are retained, never deleted, so later token/attendance/reporting logic can still see them.",
       "enum": [
         "scheduled",
         "completed",
@@ -39,23 +54,44 @@
       ],
       "default": "scheduled"
     },
-    "skill_level": {
+    "notes": {
       "type": "string",
-      "description": "Skill level the class is aimed at",
+      "description": "Optional internal notes for staff. Not shown to members."
+    },
+    "cancellation_type": {
+      "type": "string",
+      "description": "Why the session was cancelled. Lets later compensation logic tell an ordinary cancellation apart from an academy-wide or weather/haze disruption without a schema change.",
       "enum": [
-        "beginner",
-        "intermediate",
-        "advanced"
+        "normal",
+        "academy",
+        "weather"
       ]
+    },
+    "cancellation_reason": {
+      "type": "string",
+      "description": "Optional free-text reason recorded with the cancellation."
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the session was marked cancelled (cleared if the cancellation is reversed)."
+    },
+    "cancelled_by": {
+      "type": "string",
+      "description": "User who marked the session cancelled."
     }
   },
   "required": [
     "name",
-    "coach_id",
-    "class_date"
+    "class_date",
+    "location_id"
   ],
   "rls": {
-    "read": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "create": {
       "user_condition": {
         "role": "admin"
@@ -71,7 +107,5 @@
         "role": "admin"
       }
     }
-  },
-  "name": "Class",
-  "type": "object"
+  }
 }
