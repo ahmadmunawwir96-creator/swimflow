@@ -49,7 +49,7 @@
     },
     "update": {
       "user_condition": {
-        "role": "admin"
+        "role": "swimflow_audit_immutable"
       }
     },
     "delete": false

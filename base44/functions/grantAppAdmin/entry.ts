@@ -71,6 +71,8 @@ export default async function(req) {
       { status: 200 }
     );
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Diagnostics stay in the function logs; the client never sees internals.
+    console.error('[grantAppAdmin] unexpected failure', error);
+    return Response.json({ error: 'Grant could not be completed' }, { status: 500 });
   }
 }
