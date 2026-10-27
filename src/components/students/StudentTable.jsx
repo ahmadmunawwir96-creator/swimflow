@@ -41,6 +41,7 @@ export default function StudentTable({ students }) {
             <TableHead>Swimmer</TableHead>
             <TableHead>Level</TableHead>
             <TableHead>Managed by</TableHead>
+            <TableHead>Home branch</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Joined</TableHead>
           </TableRow>
@@ -58,6 +59,7 @@ export default function StudentTable({ students }) {
                 </TableCell>
                 <TableCell className="text-sm">{LEVEL_LABEL[s.swimming_level] || '—'}</TableCell>
                 <TableCell className="text-sm">{OWNER_LABEL[s.ownership_type] || '—'}</TableCell>
+                <TableCell className="text-sm">{s.home_branch_name || 'Unassigned'}</TableCell>
                 <TableCell>
                   <Badge className={STATUS_STYLE[s.status] || ''}>
                     {STATUS_LABEL[s.status] || s.status}

@@ -23,7 +23,7 @@ export const MAX_SEARCH_LENGTH = 80;
 
 // Only these keys may be supplied by the browser. Anything else is rejected so a
 // caller cannot smuggle in a branch id, role, or account id hoping it is honoured.
-export const DIRECTORY_ALLOWED_PARAMS = ['search', 'status', 'limit', 'cursor'];
+export const DIRECTORY_ALLOWED_PARAMS = ['search', 'status', 'limit', 'cursor', 'branch_id'];
 
 // Mirrors the Student.status enum. 'all' and empty both mean "no status filter".
 export const STUDENT_STATUS_VALUES = ['active', 'inactive', 'trial', 'left'];
@@ -117,6 +117,17 @@ export function parseStatus(value) {
   return { value };
 }
 
+// A branch filter is a convenience only. It is validated as a string here and
+// then checked against the server-resolved scope by the caller — a branch id the
+// Admin is not scoped to is refused, never merged into the query.
+export function parseBranchId(value) {
+  if (value === undefined || value === null || value === '') return { value: null };
+  if (typeof value !== 'string' || !value.trim()) {
+    return { error: jsonError(400, 'branch_id must be a non-empty string') };
+  }
+  return { value: value.trim() };
+}
+
 export function parseCursor(value) {
   if (value === undefined || value === null || value === '') return { value: null };
   if (typeof value !== 'string') return { error: jsonError(400, 'cursor must be a string') };
@@ -136,7 +147,7 @@ export function toPage(result) {
 // 5. Least-privilege projection for the directory screen.
 // Deliberately excluded: medical_notes, emergency contacts, reason_for_leaving,
 // consent guardian contact details, account_id, and all payment/token data.
-export function projectDirectoryStudent(s) {
+export function projectDirectoryStudent(s, branchName) {
   return {
     id: s.id,
     full_name: s.full_name || null,
@@ -147,6 +158,28 @@ export function projectDirectoryStudent(s) {
     ownership_type: s.ownership_type || null,
     relationship: s.relationship || null,
     consent_status: s.consent_status || null,
-    date_joined: s.date_joined || null
+    date_joined: s.date_joined || null,
+    // The student's HOME branch (management branch) — not the branch of the
+    // classes they swim in. null means the record still needs assigning.
+    home_branch_id: s.home_branch_id || null,
+    home_branch_name: branchName || null
+  };
+}
+
+// Admin-facing single-student projection: the directory fields plus the safety and
+// consent context an administrator legitimately needs. Still excludes account_id,
+// tokens, payments and any unrelated internal identifiers.
+export function projectStudentDetail(s, branchName) {
+  return {
+    ...projectDirectoryStudent(s, branchName),
+    skill_progression: s.skill_progression || null,
+    medical_notes: s.medical_notes || null,
+    emergency_contact_name: s.emergency_contact_name || null,
+    emergency_contact_phone: s.emergency_contact_phone || null,
+    consent_guardian_name: s.consent_guardian_name || null,
+    consent_guardian_phone: s.consent_guardian_phone || null,
+    consent_date: s.consent_date || null,
+    date_left: s.date_left || null,
+    reason_for_leaving: s.reason_for_leaving || null
   };
 }

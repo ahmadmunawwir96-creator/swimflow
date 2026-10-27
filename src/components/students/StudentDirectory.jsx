@@ -28,7 +28,9 @@ const STATUS_OPTIONS = [
 // from the server rather than a client-side query.
 export default function StudentDirectory() {
   const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState({ search: '', status: 'all' });
+  const [query, setQuery] = useState({ search: '', status: 'all', branch: '' });
+  const [branches, setBranches] = useState([]);
+  const [scope, setScope] = useState(null);
   const [students, setStudents] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
@@ -45,9 +47,12 @@ export default function StudentDirectory() {
       const res = await academyApi.listStudents({
         search: query.search,
         status: query.status,
+        branch_id: query.branch || '',
         limit: PAGE_SIZE
       });
       setStudents(Array.isArray(res?.students) ? res.students : []);
+      setBranches(Array.isArray(res?.branches) ? res.branches : []);
+      setScope(res?.scope || null);
       setCursor(res?.next_cursor || null);
       setHasMore(!!res?.has_more);
     } catch (e) {
@@ -73,6 +78,7 @@ export default function StudentDirectory() {
       const res = await academyApi.listStudents({
         search: query.search,
         status: query.status,
+        branch_id: query.branch || '',
         limit: PAGE_SIZE,
         cursor
       });
@@ -93,10 +99,10 @@ export default function StudentDirectory() {
 
   const reset = () => {
     setSearchInput('');
-    setQuery({ search: '', status: 'all' });
+    setQuery({ search: '', status: 'all', branch: '' });
   };
 
-  const filtered = !!query.search || query.status !== 'all';
+  const filtered = !!query.search || query.status !== 'all' || !!query.branch;
 
   return (
     <Card>
@@ -132,6 +138,22 @@ export default function StudentDirectory() {
               ))}
             </SelectContent>
           </Select>
+          {branches.length > 1 && (
+            <Select
+              value={query.branch || 'all'}
+              onValueChange={(v) => setQuery((q) => ({ ...q, branch: v === 'all' ? '' : v }))}
+            >
+              <SelectTrigger className="sm:w-48" aria-label="Filter by branch">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button variant="outline" onClick={reset} disabled={!filtered && !searchInput}>
             <RefreshCw className="h-4 w-4" /> Reset
           </Button>
@@ -172,6 +194,13 @@ export default function StudentDirectory() {
                 Showing {students.length} swimmer{students.length === 1 ? '' : 's'}
                 {query.search ? ` matching “${query.search}”` : ''}
               </span>
+              {scope && (
+                <span>
+                  {scope.all_branches
+                    ? 'All branches'
+                    : branches.map((b) => b.name).join(', ') || 'No branch in scope'}
+                </span>
+              )}
             </div>
             <StudentTable students={students} />
             {error && <p className="text-sm text-destructive">{error}</p>}
