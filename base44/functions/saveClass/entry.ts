@@ -20,7 +20,7 @@ import {
   requireLevel,
   minutesOf,
   findScheduleConflicts,
-  summariseConflicts,
+  conflictResponse,
   getRecordOrNull,
   resolveClassBranchId,
   writeClassAudit,
@@ -158,31 +158,13 @@ export default async function(req) {
       exclude_id: classId.value || null
     });
 
-    if (conflicts.coach.length) {
-      return Response.json(
-        {
-          error: 'That coach already teaches another class at this time.',
-          conflicts: summariseConflicts(conflicts.coach)
-        },
-        { status: 409 }
-      );
-    }
-
     // The venue rule is deliberately a confirmation, not a hard refusal: whether
     // one pool can host two classes at once depends on lanes, which the owner has
     // not confirmed. The backend still refuses to save without an explicit
-    // confirmation, so a clash is never created silently.
-    const confirmedOverlap = body.confirm_location_overlap === true;
-    if (conflicts.location.length && !confirmedOverlap) {
-      return Response.json(
-        {
-          error: 'Another class is already at this venue at that time.',
-          requires_confirmation: true,
-          conflicts: summariseConflicts(conflicts.location)
-        },
-        { status: 409 }
-      );
-    }
+    // confirmation, so a clash is never created silently. The rule itself lives in
+    // classAccess.ts and is shared with the cancelClass restore path.
+    const conflictFailure = conflictResponse(conflicts, body.confirm_location_overlap === true);
+    if (conflictFailure) return conflictFailure;
 
     const label = name.value || `${LEVEL_LABELS[level.value]} class`;
     const payload = {

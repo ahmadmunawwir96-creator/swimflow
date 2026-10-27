@@ -294,6 +294,37 @@ export function summariseConflicts(rows) {
   }));
 }
 
+// The single decision point for scheduling conflicts. saveClass and
+// cancelClass(restore) both call this, so the coach rule and the venue rule can
+// never drift into two slightly different versions:
+//   - a coach may not be in two places at once -> hard refusal (409)
+//   - a venue may host an overlapping class -> needs explicit confirmation (409),
+//     because whether one pool runs two classes at once depends on lanes and the
+//     owner has not confirmed that rule yet.
+// Returns a ready Response to send, or null when nothing blocks the write.
+export function conflictResponse(conflicts, confirmedLocationOverlap) {
+  if (conflicts.coach.length) {
+    return Response.json(
+      {
+        error: 'That coach already teaches another class at this time.',
+        conflicts: summariseConflicts(conflicts.coach)
+      },
+      { status: 409 }
+    );
+  }
+  if (conflicts.location.length && !confirmedLocationOverlap) {
+    return Response.json(
+      {
+        error: 'Another class is already at this venue at that time.',
+        requires_confirmation: true,
+        conflicts: summariseConflicts(conflicts.location)
+      },
+      { status: 409 }
+    );
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- projections
 
 export function buildClassContext(base44Names) {

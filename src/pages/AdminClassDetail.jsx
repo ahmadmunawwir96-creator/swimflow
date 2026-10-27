@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import NoticePanel from '@/components/common/NoticePanel';
 import ClassStatusBadge from '@/components/classes/ClassStatusBadge';
 import CancelClassDialog from '@/components/classes/CancelClassDialog';
+import RestoreClassNotice from '@/components/classes/RestoreClassNotice';
 import { ArrowLeft, Pencil, CalendarDays, Ban, RotateCcw, ShieldAlert } from 'lucide-react';
 import { classDate, timeRange, levelLabel, classStatusLabel, cancellationTypeLabel, capacityLabel } from '@/lib/classFormat';
 
@@ -29,6 +30,8 @@ export default function AdminClassDetail() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [restoreConflict, setRestoreConflict] = useState(null);
+  const [restoreWarnings, setRestoreWarnings] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +61,8 @@ export default function AdminClassDetail() {
     try {
       await academyApi.cancelClass(id, values);
       setCancelOpen(false);
+      setRestoreConflict(null);
+      setRestoreWarnings([]);
       await load();
     } catch (e) {
       setActionError(e.message || 'The class could not be cancelled.');
@@ -66,14 +71,26 @@ export default function AdminClassDetail() {
     }
   };
 
-  const restore = async () => {
+  // Restoring re-runs the server-side conflict checks: a clashing coach is refused
+  // outright, a clashing venue needs an explicit confirmation.
+  const restore = async (confirmOverlap) => {
     setSaving(true);
     setActionError(null);
     try {
-      await academyApi.cancelClass(id, { cancel: false });
+      const res = await academyApi.cancelClass(id, {
+        cancel: false,
+        ...(confirmOverlap ? { confirm_location_overlap: true } : {})
+      });
+      setRestoreConflict(null);
+      setRestoreWarnings(res?.warnings || []);
       await load();
     } catch (e) {
-      setActionError(e.message || 'The cancellation could not be reversed.');
+      if (e.status === 409 && e.data?.requires_confirmation) {
+        setRestoreConflict({ message: e.message, conflicts: e.data.conflicts || [] });
+      } else {
+        setRestoreConflict(null);
+        setActionError(e.message || 'The cancellation could not be reversed.');
+      }
     } finally {
       setSaving(false);
     }
@@ -132,7 +149,7 @@ export default function AdminClassDetail() {
                   </Button>
                 )}
                 {item.status === 'cancelled' ? (
-                  <Button variant="outline" onClick={restore} disabled={saving} className="w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => restore(false)} disabled={saving} className="w-full sm:w-auto">
                     <RotateCcw className="h-4 w-4" /> {saving ? 'Restoring…' : 'Restore class'}
                   </Button>
                 ) : (
@@ -147,6 +164,22 @@ export default function AdminClassDetail() {
             {actionError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {actionError}
+              </div>
+            )}
+
+            {restoreConflict && (
+              <RestoreClassNotice
+                message={restoreConflict.message}
+                conflicts={restoreConflict.conflicts}
+                busy={saving}
+                onConfirm={() => restore(true)}
+                onDismiss={() => setRestoreConflict(null)}
+              />
+            )}
+
+            {restoreWarnings.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {restoreWarnings.join(' ')}
               </div>
             )}
 
