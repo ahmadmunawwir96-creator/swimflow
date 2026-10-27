@@ -89,7 +89,7 @@ export default function MemberClasses() {
                 <Select value={swimmerId || 'all'} onValueChange={chooseSwimmer}>
                   <SelectTrigger aria-label="Choose a swimmer"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All levels</SelectItem>
+                    <SelectItem value="all">All swimmers</SelectItem>
                     {swimmers.map((swimmer) => (
                       <SelectItem key={swimmer.id} value={swimmer.id}>
                         {swimmer.full_name || 'Swimmer'}

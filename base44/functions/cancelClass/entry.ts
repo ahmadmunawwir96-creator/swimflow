@@ -37,6 +37,10 @@ import {
 // venue. Before restoring we therefore re-run the same checks as creating a class
 // (conflictResponse in classAccess.ts — one shared rule, not a second copy).
 //
+// A cancelled class is allowed to keep an inactive venue (history is preserved),
+// but it may never become scheduled at one: restoring into a switched-off venue is
+// a hard refusal (409) and leaves the record completely untouched.
+//
 // Supported input: { class_id, cancel (default true), cancellation_type,
 // cancellation_reason, confirm_location_overlap }.
 const ALLOWED_PARAMS = [
@@ -104,7 +108,6 @@ export default async function(req) {
 
     // ---- restore validation (only when reversing a cancellation) ----
     // Nothing on the cancelled record is modified until every check below passes.
-    let warnings = [];
     if (!cancel) {
       if (body.confirm_location_overlap !== undefined && typeof body.confirm_location_overlap !== 'boolean') {
         return jsonError(400, 'confirm_location_overlap must be true or false');
@@ -134,6 +137,17 @@ export default async function(req) {
         return jsonError(409, 'The venue for this class is no longer in the same branch. Create a new session instead.');
       }
 
+      // The venue may have been deactivated while the class sat cancelled. A
+      // cancelled class keeps it happily, but a scheduled class must not sit in a
+      // venue that is switched off. Refused before any write, so the record keeps its
+      // cancellation; the admin reactivates the venue or creates a session elsewhere.
+      if (venue.is_active === false) {
+        return jsonError(
+          409,
+          'This venue is inactive. Reactivate the venue or create the class at an active venue before restoring it.'
+        );
+      }
+
       const conflicts = await findScheduleConflicts(base44, {
         class_date: cls.class_date,
         start_time: cls.start_time,
@@ -145,13 +159,6 @@ export default async function(req) {
 
       const conflictFailure = conflictResponse(conflicts, body.confirm_location_overlap === true);
       if (conflictFailure) return conflictFailure;
-
-      // Not a refusal: the venue may simply have been deactivated while the class
-      // sat cancelled, and blocking would leave the record unable to be restored or
-      // edited at all. The caller is told so it is never a silent surprise.
-      if (venue.is_active === false) {
-        warnings = ['That venue is currently inactive.'];
-      }
     }
 
     const payload = cancel
@@ -202,8 +209,7 @@ export default async function(req) {
               type_label: CANCELLATION_TYPE_LABELS[saved.cancellation_type] || null,
               reason: saved.cancellation_reason || null
             }
-          : null,
-        warnings: cancel ? [] : warnings
+          : null
       },
       { status: 200 }
     );

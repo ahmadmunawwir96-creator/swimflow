@@ -31,7 +31,6 @@ export default function AdminClassDetail() {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [restoreConflict, setRestoreConflict] = useState(null);
-  const [restoreWarnings, setRestoreWarnings] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,7 +61,6 @@ export default function AdminClassDetail() {
       await academyApi.cancelClass(id, values);
       setCancelOpen(false);
       setRestoreConflict(null);
-      setRestoreWarnings([]);
       await load();
     } catch (e) {
       setActionError(e.message || 'The class could not be cancelled.');
@@ -71,18 +69,18 @@ export default function AdminClassDetail() {
     }
   };
 
-  // Restoring re-runs the server-side conflict checks: a clashing coach is refused
-  // outright, a clashing venue needs an explicit confirmation.
+  // Restoring re-runs the server-side checks: an inactive venue or a clashing coach
+  // is refused outright (the class stays cancelled), while a clashing venue needs an
+  // explicit confirmation.
   const restore = async (confirmOverlap) => {
     setSaving(true);
     setActionError(null);
     try {
-      const res = await academyApi.cancelClass(id, {
+      await academyApi.cancelClass(id, {
         cancel: false,
         ...(confirmOverlap ? { confirm_location_overlap: true } : {})
       });
       setRestoreConflict(null);
-      setRestoreWarnings(res?.warnings || []);
       await load();
     } catch (e) {
       if (e.status === 409 && e.data?.requires_confirmation) {
@@ -175,12 +173,6 @@ export default function AdminClassDetail() {
                 onConfirm={() => restore(true)}
                 onDismiss={() => setRestoreConflict(null)}
               />
-            )}
-
-            {restoreWarnings.length > 0 && (
-              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                {restoreWarnings.join(' ')}
-              </div>
             )}
 
             {item.status === 'cancelled' && (
