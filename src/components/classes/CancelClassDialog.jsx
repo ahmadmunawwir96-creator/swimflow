@@ -19,11 +19,11 @@ import {
 } from '@/components/ui/select';
 import { CANCELLATION_TYPE_LABEL } from '@/lib/classFormat';
 
-const TYPES = ['normal', 'academy', 'weather'];
+const TYPES = ['normal', 'academy'];
 
 // Cancelling keeps the class record; this dialog only records why, so later token
-// and reporting logic can tell a normal cancellation from haze or an academy-wide
-// closure.
+// and reporting logic can tell a normal cancellation from an academy-wide closure.
+// Anything more specific (e.g. why the academy closed) goes in the free-text reason.
 export default function CancelClassDialog({ open, onOpenChange, classLabel, saving, error, onConfirm }) {
   const [type, setType] = useState('normal');
   const [reason, setReason] = useState('');

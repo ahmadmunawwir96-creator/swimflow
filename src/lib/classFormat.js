@@ -20,8 +20,7 @@ export const CLASS_STATUS_STYLE = {
 
 export const CANCELLATION_TYPE_LABEL = {
   normal: 'Normal cancellation',
-  academy: 'Academy cancellation',
-  weather: 'Weather or haze'
+  academy: 'Academy cancellation'
 };
 
 function toLocalDate(value) {

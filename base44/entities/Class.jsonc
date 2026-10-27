@@ -60,11 +60,10 @@
     },
     "cancellation_type": {
       "type": "string",
-      "description": "Why the session was cancelled. Lets later compensation logic tell an ordinary cancellation apart from an academy-wide or weather/haze disruption without a schema change.",
+      "description": "Why the session was cancelled. 'normal' is an ordinary one-off cancellation; 'academy' is a closure decided by the academy itself. Any further detail belongs in cancellation_reason, which stays free text.",
       "enum": [
         "normal",
-        "academy",
-        "weather"
+        "academy"
       ]
     },
     "cancellation_reason": {

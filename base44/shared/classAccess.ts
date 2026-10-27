@@ -24,12 +24,12 @@ export const LEVEL_LABELS = {
 };
 
 // Cancellation types exist now so later token logic can distinguish an ordinary
-// cancellation from an academy-wide or weather/haze disruption without a migration.
-export const CANCELLATION_TYPES = ['normal', 'academy', 'weather'];
+// cancellation from an academy-wide closure without a migration. Any further detail
+// (why the academy closed) belongs in the free-text cancellation_reason.
+export const CANCELLATION_TYPES = ['normal', 'academy'];
 export const CANCELLATION_TYPE_LABELS = {
   normal: 'Normal cancellation',
-  academy: 'Academy cancellation',
-  weather: 'Weather or haze'
+  academy: 'Academy cancellation'
 };
 
 export const CLASS_STATUSES = ['scheduled', 'completed', 'cancelled'];
