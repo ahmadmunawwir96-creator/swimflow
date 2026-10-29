@@ -134,6 +134,36 @@ export function minutesOf(value) {
   return Number(parts[0]) * 60 + Number(parts[1]);
 }
 
+// ---------------------------------------------------------------- weekday
+
+// 0 = Sunday, matching Date#getUTCDay(). A Class Group recurs on exactly one
+// weekday, so the day is stored as a number and labelled here once.
+export const DAY_OF_WEEK_LABELS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday'
+];
+
+export function requireDayOfWeek(value) {
+  const numeric = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 6) {
+    return { error: jsonError(400, 'day_of_week must be a whole number from 0 (Sunday) to 6 (Saturday)') };
+  }
+  return { value: numeric };
+}
+
+// The weekday of a YYYY-MM-DD value, read in UTC so the calendar day never shifts
+// in a positive-offset timezone like Malaysia.
+export function dayOfWeekOfDate(dateValue) {
+  const parsed = new Date(dateValue + 'T00:00:00Z');
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.getUTCDay();
+}
+
 // ---------------------------------------------------------------- input values
 
 export function requireId(value, field) {
@@ -257,31 +287,73 @@ export async function loadAdminCoaches(base44, roles) {
     .sort((a, b) => String(a.name).localeCompare(String(b.name)));
 }
 
+// Resolve a venue the caller may actually schedule in: it must exist, be active
+// (unless history-only reading is wanted) and sit inside the Admin's own branch
+// scope. The branch is taken from the venue, never from the browser.
+export async function resolveAuthorizedVenue(base44, locationId, scope, options) {
+  const venue = await getRecordOrNull(base44, 'Location', locationId);
+  if (!venue) {
+    return { error: jsonError(400, 'That venue could not be found. Choose a venue from the list.') };
+  }
+  if ((options && options.requireActive !== false) && venue.is_active === false) {
+    return { error: jsonError(400, 'That venue is inactive. Choose an active venue.') };
+  }
+  if (!venue.branch_id) {
+    return { error: jsonError(400, 'That venue is not linked to a branch yet.') };
+  }
+  if (!scope.branchIds.includes(venue.branch_id)) {
+    return { error: jsonError(403, 'That venue is not in your administrator scope') };
+  }
+  return { venue };
+}
+
+// Resolve a coach who may be assigned: the User must exist AND hold an active
+// Coach role. A picker offering someone is never proof they still hold it.
+export async function resolveActiveCoach(base44, roles, coachId) {
+  const coachUser = await getRecordOrNull(base44, 'User', coachId);
+  if (!coachUser) return { error: jsonError(400, 'That coach could not be found.') };
+  const coachRole = await roles.get('coach');
+  const assignment = coachRole ? await getActiveAssignment(base44, coachId, coachRole.id) : null;
+  if (!assignment) {
+    return { error: jsonError(400, 'That person does not have an active Coach role.') };
+  }
+  return { user: coachUser };
+}
+
 // ---------------------------------------------------------------- conflicts
 
-// Overlap check for one date. Bounded to a single day of scheduled sessions, and
-// every session is compared in memory, so adding a second venue or coach never
-// adds another query.
-export async function findScheduleConflicts(base44, input) {
+// Overlap check for ONE coach across one or more dates.
+//
+// A coach is the only scheduling constraint. The academy deliberately runs
+// several classes at the same pool at the same time (one per coach on duty), so
+// a shared venue is normal and never blocks a write.
+//
+// One query, however many dates are passed, so weekly session generation checks
+// the whole range at once instead of once per date.
+export async function findCoachConflicts(base44, input) {
+  const dates = Array.isArray(input.class_dates)
+    ? [...new Set(input.class_dates.filter(Boolean))]
+    : [input.class_date].filter(Boolean);
+  if (!input.coach_id || !dates.length) return [];
+
   const page = await base44.asServiceRole.entities.Class.filter(
-    { class_date: input.class_date, status: 'scheduled' },
+    {
+      coach_id: input.coach_id,
+      status: 'scheduled',
+      class_date: dates.length === 1 ? dates[0] : { $in: dates }
+    },
     { limit: 200 }
   );
-  const rows = asArray(page).filter((row) => row && row.id !== input.exclude_id);
   const start = minutesOf(input.start_time);
   const end = minutesOf(input.end_time);
 
-  const overlaps = (row) => {
+  return asArray(page).filter((row) => {
+    if (!row || row.id === input.exclude_id) return false;
     const rowStart = minutesOf(row.start_time);
     const rowEnd = minutesOf(row.end_time);
     if (rowStart === null || rowEnd === null || start === null || end === null) return false;
     return start < rowEnd && end > rowStart;
-  };
-
-  return {
-    coach: input.coach_id ? rows.filter((row) => row.coach_id === input.coach_id && overlaps(row)) : [],
-    location: input.location_id ? rows.filter((row) => row.location_id === input.location_id && overlaps(row)) : []
-  };
+  });
 }
 
 export function summariseConflicts(rows) {
@@ -294,35 +366,24 @@ export function summariseConflicts(rows) {
   }));
 }
 
-// The single decision point for scheduling conflicts. saveClass and
-// cancelClass(restore) both call this, so the coach rule and the venue rule can
-// never drift into two slightly different versions:
-//   - a coach may not be in two places at once -> hard refusal (409)
-//   - a venue may host an overlapping class -> needs explicit confirmation (409),
-//     because whether one pool runs two classes at once depends on lanes and the
-//     owner has not confirmed that rule yet.
+// The single decision point for scheduling conflicts, shared by saveClass and
+// cancelClass(restore) so the rule cannot drift into two versions:
+//   a coach may not be in two places at once -> hard refusal (409)
+//
+// Venue overlap is deliberately NOT a conflict: the academy runs several classes
+// at the same pool at the same time, the number depending on how many coaches are
+// on duty. Staffing is not hard-coded, so no venue rule replaces it.
+//
 // Returns a ready Response to send, or null when nothing blocks the write.
-export function conflictResponse(conflicts, confirmedLocationOverlap) {
-  if (conflicts.coach.length) {
-    return Response.json(
-      {
-        error: 'That coach already teaches another class at this time.',
-        conflicts: summariseConflicts(conflicts.coach)
-      },
-      { status: 409 }
-    );
-  }
-  if (conflicts.location.length && !confirmedLocationOverlap) {
-    return Response.json(
-      {
-        error: 'Another class is already at this venue at that time.',
-        requires_confirmation: true,
-        conflicts: summariseConflicts(conflicts.location)
-      },
-      { status: 409 }
-    );
-  }
-  return null;
+export function coachConflictResponse(conflicts) {
+  if (!conflicts || !conflicts.length) return null;
+  return Response.json(
+    {
+      error: 'That coach already teaches another class at this time.',
+      conflicts: summariseConflicts(conflicts)
+    },
+    { status: 409 }
+  );
 }
 
 // ---------------------------------------------------------------- projections
@@ -355,6 +416,7 @@ export function projectAdminClass(cls, ctx) {
     capacity: typeof cls.max_capacity === 'number' ? cls.max_capacity : null,
     status: cls.status || 'scheduled',
     notes: cls.notes || null,
+    class_group_id: cls.class_group_id || null,
     is_past: Boolean(cls.class_date && cls.class_date < ctx.today),
     location: { id: locationId, name: locationId ? ctx.locationNames[locationId] || null : null },
     branch: { id: branchId, name: branchId ? ctx.branchNames[branchId] || null : null },

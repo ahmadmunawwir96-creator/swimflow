@@ -56,24 +56,20 @@ export default function AdminClassEditor() {
     load();
   }, [load]);
 
-  const handleSubmit = async (values, opts) => {
+  const handleSubmit = async (values) => {
     setSaving(true);
     setSaveError(null);
     setConflict(null);
     try {
       const payload = { ...values };
       if (id) payload.class_id = id;
-      if (opts?.confirmOverlap) payload.confirm_location_overlap = true;
       const res = await academyApi.saveClass(payload);
       const savedId = res?.class?.id || id;
       navigate(savedId ? `/admin/classes/${savedId}` : '/admin/classes', { replace: true });
     } catch (e) {
-      if (e.status === 409 && e.data?.requires_confirmation) {
-        setConflict({
-          message: e.message,
-          conflicts: e.data.conflicts || [],
-          requiresConfirmation: true
-        });
+      // The only scheduling conflict left is a coach already teaching then.
+      if (e.status === 409 && Array.isArray(e.data?.conflicts) && e.data.conflicts.length) {
+        setConflict({ message: e.message, conflicts: e.data.conflicts });
       } else {
         setSaveError(e.message || 'The class could not be saved.');
       }

@@ -77,6 +77,21 @@ export function timeRange(start, end) {
   return `${timeLabel(start)} – ${timeLabel(end)}`;
 }
 
+// 0 = Sunday, matching the stored ClassGroup.day_of_week.
+export const DAY_OF_WEEK_LABELS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday'
+];
+
+export function dayOfWeekLabel(value) {
+  return DAY_OF_WEEK_LABELS[value] || 'Weekly';
+}
+
 export function levelLabel(level) {
   return LEVEL_LABEL[level] || 'Level not set';
 }

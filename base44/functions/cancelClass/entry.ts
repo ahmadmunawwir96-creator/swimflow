@@ -16,8 +16,8 @@ import {
   optionalText,
   parseCancellationType,
   minutesOf,
-  findScheduleConflicts,
-  conflictResponse,
+  findCoachConflicts,
+  coachConflictResponse,
   getRecordOrNull,
   resolveClassBranchId,
   writeClassAudit,
@@ -32,24 +32,25 @@ import {
 // restoration, attendance and reporting will need.
 //
 // Restoring is NOT a plain status flip. A cancelled class is invisible to the
-// conflict checks, so time may have moved on while it sat cancelled: its coach may
-// now teach something else at that hour, or another class may now occupy its
-// venue. Before restoring we therefore re-run the same checks as creating a class
-// (conflictResponse in classAccess.ts — one shared rule, not a second copy).
+// conflict checks, so time may have moved on while it sat cancelled and its coach
+// may now teach something else at that hour. Before restoring we therefore
+// re-run the same coach rule as creating a class (coachConflictResponse in
+// classAccess.ts — one shared rule, not a second copy).
 //
-// A cancelled class is allowed to keep an inactive venue (history is preserved),
-// but it may never become scheduled at one: restoring into a switched-off venue is
-// a hard refusal (409) and leaves the record completely untouched.
+// A shared venue is never a reason to refuse: several classes normally run at the
+// same pool at the same time.
+//
+// A cancelled class may keep an inactive venue (history is preserved), but it may
+// never become scheduled at one: restoring into a switched-off venue is a hard
+// refusal (409) and leaves the record completely untouched.
+//
+// The coach's *role* is deliberately not re-validated here: a cancelled class
+// cannot be edited, so a revoked Coach role would otherwise make restoration
+// impossible. The admin restores first, then reassigns the coach.
 //
 // Supported input: { class_id, cancel (default true), cancellation_type,
-// cancellation_reason, confirm_location_overlap }.
-const ALLOWED_PARAMS = [
-  'class_id',
-  'cancel',
-  'cancellation_type',
-  'cancellation_reason',
-  'confirm_location_overlap'
-];
+// cancellation_reason }.
+const ALLOWED_PARAMS = ['class_id', 'cancel', 'cancellation_type', 'cancellation_reason'];
 
 export default async function(req) {
   try {
@@ -109,10 +110,6 @@ export default async function(req) {
     // ---- restore validation (only when reversing a cancellation) ----
     // Nothing on the cancelled record is modified until every check below passes.
     if (!cancel) {
-      if (body.confirm_location_overlap !== undefined && typeof body.confirm_location_overlap !== 'boolean') {
-        return jsonError(400, 'confirm_location_overlap must be true or false');
-      }
-
       const storedDate = requireDate(cls.class_date, 'class_date');
       const storedStart = requireTime(cls.start_time, 'start_time');
       const storedEnd = requireTime(cls.end_time, 'end_time');
@@ -148,16 +145,27 @@ export default async function(req) {
         );
       }
 
-      const conflicts = await findScheduleConflicts(base44, {
+      // A real class always has a coach, so a session cannot come back to life
+      // without one.
+      if (!cls.coach_id) {
+        return jsonError(409, 'This class has no coach, so it cannot be restored. Create a new session instead.');
+      }
+      const coachUser = await getRecordOrNull(base44, 'User', cls.coach_id);
+      if (!coachUser) {
+        return jsonError(
+          409,
+          'The coach for this class no longer exists, so it cannot be restored. Create a new session instead.'
+        );
+      }
+
+      const coachConflicts = await findCoachConflicts(base44, {
         class_date: cls.class_date,
         start_time: cls.start_time,
         end_time: cls.end_time,
-        coach_id: cls.coach_id || null,
-        location_id: cls.location_id,
+        coach_id: cls.coach_id,
         exclude_id: cls.id
       });
-
-      const conflictFailure = conflictResponse(conflicts, body.confirm_location_overlap === true);
+      const conflictFailure = coachConflictResponse(coachConflicts);
       if (conflictFailure) return conflictFailure;
     }
 
@@ -193,8 +201,7 @@ export default async function(req) {
               cancellation_type: cls.cancellation_type || null,
               cancellation_reason: cls.cancellation_reason || null
             },
-            restored_to: 'scheduled',
-            location_overlap_confirmed: body.confirm_location_overlap === true
+            restored_to: 'scheduled'
           }
     });
 

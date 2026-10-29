@@ -1,0 +1,86 @@
+{
+  "name": "ClassGroup",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Readable label for the recurring group, e.g. 'Beginner Saturday'. The backend derives one from the level and weekday when the admin leaves it blank."
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Physical venue/pool where the weekly session takes place."
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Server-derived snapshot of the venue's Branch at write time (authorization boundary + display). Never accepted from the client."
+    },
+    "coach_id": {
+      "type": "string",
+      "description": "Coach User who normally takes the weekly session. Required: every real class has a coach."
+    },
+    "skill_level": {
+      "type": "string",
+      "description": "Level the group is aimed at. Same values as Student.swimming_level and Class.skill_level so a swimmer's level maps onto a group without translation.",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "day_of_week": {
+      "type": "number",
+      "description": "Weekday the group recurs on: 0 = Sunday through 6 = Saturday."
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Weekly start time in 24-hour HH:MM, academy local time."
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Weekly end time in 24-hour HH:MM."
+    },
+    "max_capacity": {
+      "type": "number",
+      "description": "Maximum swimmers for each session generated from this group."
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether sessions may still be generated from this group. Deactivated groups are kept so their historical sessions stay linked.",
+      "default": true
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional internal notes for staff. Not shown to members."
+    }
+  },
+  "required": [
+    "location_id",
+    "coach_id",
+    "skill_level",
+    "day_of_week",
+    "start_time",
+    "end_time"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

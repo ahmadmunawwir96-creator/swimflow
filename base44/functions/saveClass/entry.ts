@@ -7,7 +7,6 @@ import {
   serverFailure
 } from '../../shared/directoryAccess.ts';
 import { resolveAdminBranchScope, isScopeEmpty } from '../../shared/adminScope.ts';
-import { getActiveAssignment } from '../../shared/academyRoles.ts';
 import {
   createRoleCache,
   authorizeAcademyAdminWithCache,
@@ -19,10 +18,12 @@ import {
   requireCapacity,
   requireLevel,
   minutesOf,
-  findScheduleConflicts,
-  conflictResponse,
+  findCoachConflicts,
+  coachConflictResponse,
   getRecordOrNull,
   resolveClassBranchId,
+  resolveAuthorizedVenue,
+  resolveActiveCoach,
   writeClassAudit,
   projectAdminClass,
   buildClassContext,
@@ -33,18 +34,24 @@ import {
   MAX_NOTES_LENGTH
 } from '../../shared/classAccess.ts';
 
-// Create or edit one scheduled session.
+// Create or edit one dated session.
 //
 // Nothing relationship-shaped is trusted from the browser:
 //   - the venue is loaded and must exist, be active and sit in an authorized branch
 //   - the branch is derived from that venue (a client branch_id is rejected
 //     outright by rejectUnknownParams)
-//   - the coach, when supplied, must exist and hold an active Coach role
-//   - overlapping sessions are detected server-side
+//   - the coach is REQUIRED and must exist and hold an active Coach role
+//   - the coach may not already be teaching an overlapping session
 //
-// Supported input: location_id, skill_level, class_date, start_time, end_time,
-// max_capacity, optional class_id, coach_id, name, notes,
-// confirm_location_overlap.
+// Several sessions may share the same venue at the same time — the academy runs
+// one class per coach on duty — so a shared venue is never a conflict.
+//
+// class_group_id is never accepted here. It is written by generateClassSessions,
+// and an existing link is preserved on edit so a session never drifts away from
+// the group it came from.
+//
+// Supported input: location_id, coach_id, skill_level, class_date, start_time,
+// end_time, max_capacity, optional class_id, name, notes.
 const ALLOWED_PARAMS = [
   'class_id',
   'location_id',
@@ -55,8 +62,7 @@ const ALLOWED_PARAMS = [
   'end_time',
   'max_capacity',
   'name',
-  'notes',
-  'confirm_location_overlap'
+  'notes'
 ];
 
 export default async function(req) {
@@ -85,6 +91,10 @@ export default async function(req) {
     // ---- field validation (nothing is silently corrected) ----
     const locationId = requireId(body.location_id, 'location_id');
     if (locationId.error) return locationId.error;
+    const coachId = requireId(body.coach_id, 'coach_id');
+    if (coachId.error) {
+      return jsonError(400, 'Every class needs a coach. Choose one from the list.');
+    }
     const level = requireLevel(body.skill_level);
     if (level.error) return level.error;
     const classDate = requireDate(body.class_date, 'class_date');
@@ -104,35 +114,16 @@ export default async function(req) {
     if (notes.error) return notes.error;
     const classId = optionalId(body.class_id, 'class_id');
     if (classId.error) return classId.error;
-    const coachId = optionalId(body.coach_id, 'coach_id');
-    if (coachId.error) return coachId.error;
 
     // ---- venue: existence, activity, branch, scope ----
-    const venue = await getRecordOrNull(base44, 'Location', locationId.value);
-    if (!venue) return jsonError(400, 'That venue could not be found. Choose a venue from the list.');
-    if (venue.is_active === false) {
-      return jsonError(400, 'That venue is inactive. Choose an active venue.');
-    }
-    if (!venue.branch_id) {
-      return jsonError(400, 'That venue is not linked to a branch yet.');
-    }
-    if (!scope.branchIds.includes(venue.branch_id)) {
-      return jsonError(403, 'That venue is not in your administrator scope');
-    }
+    const venueRes = await resolveAuthorizedVenue(base44, locationId.value, scope);
+    if (venueRes.error) return venueRes.error;
+    const venue = venueRes.venue;
 
     // ---- coach: existence + active Coach role ----
-    let coachUser = null;
-    if (coachId.value) {
-      coachUser = await getRecordOrNull(base44, 'User', coachId.value);
-      if (!coachUser) return jsonError(400, 'That coach could not be found.');
-      const coachRole = await roles.get('coach');
-      const coachAssignment = coachRole
-        ? await getActiveAssignment(base44, coachId.value, coachRole.id)
-        : null;
-      if (!coachAssignment) {
-        return jsonError(400, 'That person does not have an active Coach role.');
-      }
-    }
+    const coachRes = await resolveActiveCoach(base44, roles, coachId.value);
+    if (coachRes.error) return coachRes.error;
+    const coachUser = coachRes.user;
 
     // ---- existing class (edit) ----
     let existing = null;
@@ -148,22 +139,15 @@ export default async function(req) {
       }
     }
 
-    // ---- scheduling conflicts ----
-    const conflicts = await findScheduleConflicts(base44, {
+    // ---- coach conflict (the only scheduling conflict) ----
+    const coachConflicts = await findCoachConflicts(base44, {
       class_date: classDate.value,
       start_time: startTime.value,
       end_time: endTime.value,
       coach_id: coachId.value,
-      location_id: locationId.value,
       exclude_id: classId.value || null
     });
-
-    // The venue rule is deliberately a confirmation, not a hard refusal: whether
-    // one pool can host two classes at once depends on lanes, which the owner has
-    // not confirmed. The backend still refuses to save without an explicit
-    // confirmation, so a clash is never created silently. The rule itself lives in
-    // classAccess.ts and is shared with the cancelClass restore path.
-    const conflictFailure = conflictResponse(conflicts, body.confirm_location_overlap === true);
+    const conflictFailure = coachConflictResponse(coachConflicts);
     if (conflictFailure) return conflictFailure;
 
     const label = name.value || `${LEVEL_LABELS[level.value]} class`;
@@ -171,7 +155,7 @@ export default async function(req) {
       name: label,
       location_id: venue.id,
       branch_id: venue.branch_id,
-      coach_id: coachId.value || null,
+      coach_id: coachId.value,
       skill_level: level.value,
       class_date: classDate.value,
       start_time: startTime.value,
@@ -200,12 +184,11 @@ export default async function(req) {
         details: {
           ...payload,
           branch_name: branchLabel,
-          coach_name: displayName(coachUser),
-          location_overlap_confirmed: conflicts.location.length > 0
+          coach_name: displayName(coachUser)
         }
       });
     } else {
-      const coachChanged = (existing.coach_id || null) !== (coachId.value || null);
+      const coachChanged = (existing.coach_id || null) !== coachId.value;
       const locationChanged = (existing.location_id || null) !== venue.id;
       const otherFields = ['name', 'skill_level', 'class_date', 'start_time', 'end_time', 'max_capacity', 'notes'];
       const changedFields = otherFields.filter((field) => {
@@ -220,7 +203,7 @@ export default async function(req) {
           target_id: saved.id,
           branch_id: venue.branch_id,
           summary: `Coach changed for ${label} on ${classDate.value} ${startTime.value}`,
-          details: { before: existing.coach_id || null, after: coachId.value || null, coach_name: displayName(coachUser) }
+          details: { before: existing.coach_id || null, after: coachId.value, coach_name: displayName(coachUser) }
         });
       }
       if (locationChanged) {
@@ -244,7 +227,7 @@ export default async function(req) {
           target_id: saved.id,
           branch_id: venue.branch_id,
           summary: `Updated ${label} on ${classDate.value} ${startTime.value}-${endTime.value}`,
-          details: { changed: changedFields, before, after, location_overlap_confirmed: conflicts.location.length > 0 }
+          details: { changed: changedFields, before, after }
         });
       }
     }
@@ -256,11 +239,9 @@ export default async function(req) {
     });
     const coachNames = {};
     const activeCoachIds = new Set();
-    if (coachId.value) {
-      const resolvedName = displayName(coachUser);
-      if (resolvedName) coachNames[coachId.value] = resolvedName;
-      activeCoachIds.add(coachId.value);
-    }
+    const resolvedName = displayName(coachUser);
+    if (resolvedName) coachNames[coachId.value] = resolvedName;
+    activeCoachIds.add(coachId.value);
 
     return Response.json(
       {
@@ -270,10 +251,7 @@ export default async function(req) {
           coachNames,
           activeCoachIds,
           today: todayInAcademyZone()
-        })),
-        warnings: conflicts.location.length
-          ? ['Another class is already at this venue at that time.']
-          : []
+        }))
       },
       { status: existing ? 200 : 201 }
     );

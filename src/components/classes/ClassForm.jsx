@@ -54,27 +54,28 @@ export default function ClassForm({
   );
   const coaches = options?.coaches || [];
 
-  const submit = (confirmOverlap) => {
-    onSubmit(
-      {
-        location_id: values.location_id,
-        skill_level: values.skill_level,
-        class_date: values.class_date,
-        start_time: values.start_time,
-        end_time: values.end_time,
-        max_capacity: Number(values.max_capacity),
-        coach_id: values.coach_id || null,
-        name: values.name.trim(),
-        notes: values.notes.trim()
-      },
-      { confirmOverlap: Boolean(confirmOverlap) }
-    );
+  // A coach is required: every real class has one, and the server refuses a
+  // session without an active Coach.
+  const submit = () => {
+    onSubmit({
+      location_id: values.location_id,
+      skill_level: values.skill_level,
+      class_date: values.class_date,
+      start_time: values.start_time,
+      end_time: values.end_time,
+      max_capacity: Number(values.max_capacity),
+      coach_id: values.coach_id,
+      name: values.name.trim(),
+      notes: values.notes.trim()
+    });
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    submit(false);
+    submit();
   };
+
+  const noCoaches = coaches.length === 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -110,11 +111,6 @@ export default function ClassForm({
                 </li>
               ))}
             </ul>
-          )}
-          {conflict.requiresConfirmation && (
-            <Button type="button" size="sm" variant="outline" onClick={() => submit(true)} disabled={saving}>
-              {saving ? 'Saving…' : 'Save anyway'}
-            </Button>
           )}
         </div>
       )}
@@ -207,17 +203,17 @@ export default function ClassForm({
           >
             <SelectTrigger id="class-coach" aria-label="Coach"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No coach assigned</SelectItem>
+              <SelectItem value="none">Choose a coach</SelectItem>
               {coaches.map((coach) => (
                 <SelectItem key={coach.user_id} value={coach.user_id}>{coach.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {coaches.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No one has the Coach role yet. You can schedule the class now and assign a coach later.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {noCoaches
+              ? 'No Coaches are available. Assign a Coach role before creating a class.'
+              : 'A coach may not be in two overlapping classes.'}
+          </p>
         </div>
 
         <div className="space-y-1 sm:col-span-2">
@@ -245,7 +241,11 @@ export default function ClassForm({
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="submit" disabled={saving || venueChoices.length === 0} className="w-full sm:w-auto">
+        <Button
+          type="submit"
+          disabled={saving || venueChoices.length === 0 || noCoaches || !values.coach_id}
+          className="w-full sm:w-auto"
+        >
           <Save className="h-4 w-4" /> {saving ? 'Saving…' : submitLabel || 'Save class'}
         </Button>
         {onCancel && (

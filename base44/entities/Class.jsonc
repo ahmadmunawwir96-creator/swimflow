@@ -17,11 +17,11 @@
     },
     "end_time": {
       "type": "string",
-      "description": "End time in 24-hour HH:MM. Required in practice because overlap detection depends on it."
+      "description": "End time in 24-hour HH:MM. Required in practice because coach overlap detection depends on it."
     },
     "location_id": {
       "type": "string",
-      "description": "Physical venue/pool where the session takes place. The session's Branch is derived from this venue server-side, never supplied by the browser."
+      "description": "Physical venue/pool where the session takes place. The session's Branch is derived from this venue server-side, never supplied by the browser. Several sessions may share the venue at the same time (one per coach on duty)."
     },
     "branch_id": {
       "type": "string",
@@ -29,7 +29,11 @@
     },
     "coach_id": {
       "type": "string",
-      "description": "Optional coach User taking the session. Validated server-side to hold an active Coach role. Empty means no coach assigned yet."
+      "description": "Coach User taking the session. Required: every real scheduled class has a coach, validated server-side to hold an active Coach role, and a coach may not be in two overlapping sessions."
+    },
+    "class_group_id": {
+      "type": "string",
+      "description": "Optional link to the ClassGroup this session was generated from. Historical only: editing the group never rewrites an existing session."
     },
     "skill_level": {
       "type": "string",
@@ -83,7 +87,8 @@
   "required": [
     "name",
     "class_date",
-    "location_id"
+    "location_id",
+    "coach_id"
   ],
   "rls": {
     "read": {

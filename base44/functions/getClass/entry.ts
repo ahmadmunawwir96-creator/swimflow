@@ -17,6 +17,7 @@ import {
   buildClassContext,
   displayName,
   todayInAcademyZone,
+  DAY_OF_WEEK_LABELS,
   requireId,
   getRecordOrNull,
   resolveClassBranchId
@@ -96,8 +97,26 @@ export default async function(req) {
 
     const venue = locations.find((item) => item.id === cls.location_id);
 
+    // A session generated from a Class Group keeps a historical link to it. The
+    // group is shown for context only; it never rewrites this session.
+    let classGroup = null;
+    if (cls.class_group_id) {
+      const group = await getRecordOrNull(base44, 'ClassGroup', cls.class_group_id);
+      if (group) {
+        classGroup = {
+          id: group.id,
+          name: group.name || null,
+          day_label: DAY_OF_WEEK_LABELS[group.day_of_week] || null,
+          start_time: group.start_time || null,
+          end_time: group.end_time || null,
+          is_active: group.is_active !== false
+        };
+      }
+    }
+
     return Response.json(
       {
+        class_group: classGroup,
         class: projectAdminClass(cls, buildClassContext({
           locationNames,
           branchNames,
