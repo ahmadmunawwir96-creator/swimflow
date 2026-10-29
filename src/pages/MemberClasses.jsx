@@ -18,7 +18,7 @@ import {
   dayHeading,
   relativeDayLabel,
   timeRange,
-  levelLabel,
+  classTypeLabel,
   capacityLabel
 } from '@/lib/classFormat';
 
@@ -172,7 +172,7 @@ export default function MemberClasses() {
                         <li key={`${group.date}-${index}`} className="space-y-1 px-4 py-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium">{timeRange(item.start_time, item.end_time)}</span>
-                            <Badge variant="secondary">{levelLabel(item.level)}</Badge>
+                            <Badge variant="secondary">{classTypeLabel(item.category, item.level)}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3 shrink-0" />

@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CalendarPlus, Pencil, Power } from 'lucide-react';
-import { timeRange, levelLabel, dayOfWeekLabel } from '@/lib/classFormat';
+import { timeRange, classTypeLabel, dayOfWeekLabel } from '@/lib/classFormat';
 
 // One row per Class Group: the weekly shape, never a dated session. Cards instead
 // of a table so the actions stay reachable on a phone.
@@ -12,7 +12,8 @@ export default function ClassGroupList({ groups, busy, onEdit, onGenerate, onTog
       {groups.map((group) => (
         <li key={group.id} className="rounded-lg border p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{group.name || levelLabel(group.level)}</span>
+            <span className="font-medium">{group.name || classTypeLabel(group.category, group.level)}</span>
+            <Badge variant="outline">{classTypeLabel(group.category, group.level)}</Badge>
             <Badge variant="secondary">
               {dayOfWeekLabel(group.day_of_week)} · {timeRange(group.start_time, group.end_time)}
             </Badge>
@@ -30,8 +31,7 @@ export default function ClassGroupList({ groups, busy, onEdit, onGenerate, onTog
             )}
           </p>
           <p className="text-sm text-muted-foreground">
-            {levelLabel(group.level)}
-            {typeof group.capacity === 'number' ? ` · capacity ${group.capacity}` : ''}
+{typeof group.capacity === 'number' ? `Capacity ${group.capacity}` : 'Capacity not set'}
           </p>
           {group.notes && <p className="mt-1 text-xs text-muted-foreground">{group.notes}</p>}
 

@@ -7,7 +7,7 @@ import NoticePanel from '@/components/common/NoticePanel';
 import ClassStatusBadge from '@/components/classes/ClassStatusBadge';
 import CancelClassDialog from '@/components/classes/CancelClassDialog';
 import { ArrowLeft, Pencil, CalendarDays, Ban, RotateCcw, ShieldAlert } from 'lucide-react';
-import { classDate, timeRange, levelLabel, classStatusLabel, cancellationTypeLabel, capacityLabel } from '@/lib/classFormat';
+import { classDate, timeRange, classTypeLabel, classStatusLabel, cancellationTypeLabel, capacityLabel } from '@/lib/classFormat';
 
 function Row({ label, children }) {
   return (
@@ -121,7 +121,7 @@ export default function AdminClassDetail() {
               <div className="space-y-1">
                 <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
                   <CalendarDays className="h-4 w-4 text-brand" />
-                  {item.name || levelLabel(item.level)}
+                  {item.name || classTypeLabel(item.category, item.level)}
                   <ClassStatusBadge status={item.status} />
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
@@ -175,7 +175,7 @@ export default function AdminClassDetail() {
             <dl>
               <Row label="Date">{classDate(item.date)}</Row>
               <Row label="Time">{timeRange(item.start_time, item.end_time)}</Row>
-              <Row label="Level">{levelLabel(item.level)}</Row>
+              <Row label="Class type">{classTypeLabel(item.category, item.level)}</Row>
               <Row label="Venue">
                 {item.location.name || 'Venue missing'}
                 {data.venue?.address && (
@@ -208,7 +208,7 @@ export default function AdminClassDetail() {
       <CancelClassDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        classLabel={item ? `${item.name || levelLabel(item.level)} · ${classDate(item.date)}` : ''}
+        classLabel={item ? `${item.name || classTypeLabel(item.category, item.level)} · ${classDate(item.date)}` : ''}
         saving={saving}
         error={actionError}
         onConfirm={cancel}

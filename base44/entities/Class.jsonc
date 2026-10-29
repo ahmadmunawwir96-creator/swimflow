@@ -4,7 +4,16 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "Readable label shown to staff and members, e.g. 'Beginner class'. The backend supplies a default derived from the level when the admin leaves it blank, so this stays required."
+      "description": "Readable label shown to staff and members, e.g. 'Beginner class'. The backend supplies a default derived from the category and level when the admin leaves it blank, so this stays required."
+    },
+    "class_category": {
+      "type": "string",
+      "description": "Kind of class, separate from swimming level: 'toddler' (age-based, no swimming level), 'standard' (needs one level) or 'adult' (one level, or null meaning mixed levels). A snapshot: sessions generated from a Class Group copy its category at generation time, and changing the group later never rewrites history.",
+      "enum": [
+        "toddler",
+        "standard",
+        "adult"
+      ]
     },
     "class_date": {
       "type": "string",
@@ -37,7 +46,7 @@
     },
     "skill_level": {
       "type": "string",
-      "description": "Level the session is aimed at. Deliberately the same values as Student.swimming_level so a swimmer's level maps onto classes without translation.",
+      "description": "Swimming level of this session. Required for standard sessions; null for toddler sessions and allowed to stay null for a mixed-level adult session. Deliberately the same values as Student.swimming_level.",
       "enum": [
         "beginner",
         "intermediate",
@@ -86,6 +95,7 @@
   },
   "required": [
     "name",
+    "class_category",
     "class_date",
     "location_id",
     "coach_id"

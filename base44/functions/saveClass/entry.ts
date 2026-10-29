@@ -16,7 +16,8 @@ import {
   requireDate,
   requireTime,
   requireCapacity,
-  requireLevel,
+  resolveCategoryLevel,
+  defaultClassLabel,
   minutesOf,
   findCoachConflicts,
   coachConflictResponse,
@@ -29,7 +30,6 @@ import {
   buildClassContext,
   displayName,
   todayInAcademyZone,
-  LEVEL_LABELS,
   MAX_NAME_LENGTH,
   MAX_NOTES_LENGTH
 } from '../../shared/classAccess.ts';
@@ -56,6 +56,7 @@ const ALLOWED_PARAMS = [
   'class_id',
   'location_id',
   'coach_id',
+  'class_category',
   'skill_level',
   'class_date',
   'start_time',
@@ -95,8 +96,10 @@ export default async function(req) {
     if (coachId.error) {
       return jsonError(400, 'Every class needs a coach. Choose one from the list.');
     }
-    const level = requireLevel(body.skill_level);
-    if (level.error) return level.error;
+    // Category and level are validated together by the same rule the class groups
+    // use: standard needs a level, toddler has none, adult may be mixed.
+    const categoryLevel = resolveCategoryLevel(body.class_category, body.skill_level);
+    if (categoryLevel.error) return categoryLevel.error;
     const classDate = requireDate(body.class_date, 'class_date');
     if (classDate.error) return classDate.error;
     const startTime = requireTime(body.start_time, 'start_time');
@@ -150,13 +153,14 @@ export default async function(req) {
     const conflictFailure = coachConflictResponse(coachConflicts);
     if (conflictFailure) return conflictFailure;
 
-    const label = name.value || `${LEVEL_LABELS[level.value]} class`;
+    const label = name.value || defaultClassLabel(categoryLevel.value.category, categoryLevel.value.level);
     const payload = {
       name: label,
       location_id: venue.id,
       branch_id: venue.branch_id,
       coach_id: coachId.value,
-      skill_level: level.value,
+      class_category: categoryLevel.value.category,
+      skill_level: categoryLevel.value.level,
       class_date: classDate.value,
       start_time: startTime.value,
       end_time: endTime.value,
@@ -190,7 +194,7 @@ export default async function(req) {
     } else {
       const coachChanged = (existing.coach_id || null) !== coachId.value;
       const locationChanged = (existing.location_id || null) !== venue.id;
-      const otherFields = ['name', 'skill_level', 'class_date', 'start_time', 'end_time', 'max_capacity', 'notes'];
+      const otherFields = ['name', 'class_category', 'skill_level', 'class_date', 'start_time', 'end_time', 'max_capacity', 'notes'];
       const changedFields = otherFields.filter((field) => {
         const before = existing[field] === undefined ? null : existing[field];
         const after = payload[field] === undefined ? null : payload[field];

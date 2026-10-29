@@ -21,16 +21,17 @@ import {
 } from '@/components/ui/select';
 import { Save } from 'lucide-react';
 import { DAY_OF_WEEK_LABELS } from '@/lib/classFormat';
-
-const LEVELS = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' }
-];
+import {
+  CLASS_CATEGORY_OPTIONS,
+  LEVEL_OPTIONS,
+  suggestedCapacity,
+  suggestedEndTime
+} from '@/lib/classDefaults';
 
 const EMPTY = {
   location_id: '',
   coach_id: '',
+  class_category: 'standard',
   skill_level: 'beginner',
   day_of_week: 6,
   start_time: '',
@@ -55,7 +56,8 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
         ? {
             location_id: initial.location?.id || '',
             coach_id: initial.coach?.id || '',
-            skill_level: initial.level || 'beginner',
+            class_category: initial.category || 'standard',
+            skill_level: initial.level || '',
             day_of_week: typeof initial.day_of_week === 'number' ? initial.day_of_week : 6,
             start_time: initial.start_time || '',
             end_time: initial.end_time || '',
@@ -68,6 +70,41 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
   }, [open, initial]);
 
   const set = (patch) => setValues((current) => ({ ...current, ...patch }));
+
+  // Toddler: no swimming level at all (the form clears it before sending).
+  // Standard: a level is required. Adult: a level is optional — empty means mixed.
+  const changeCategory = (next) => {
+    setValues((current) => {
+      const level = next === 'toddler'
+        ? ''
+        : next === 'standard'
+          ? current.skill_level || 'beginner'
+          : current.skill_level;
+      return {
+        ...current,
+        class_category: next,
+        skill_level: level,
+        max_capacity: suggestedCapacity(next, level)
+      };
+    });
+  };
+
+  const changeLevel = (next) => {
+    setValues((current) => ({
+      ...current,
+      skill_level: next === 'mixed' ? '' : next,
+      max_capacity: suggestedCapacity(current.class_category, next === 'mixed' ? '' : next)
+    }));
+  };
+
+  // Duration is a form suggestion only: an end time the admin already set is kept.
+  const changeStart = (value) => {
+    setValues((current) => ({
+      ...current,
+      start_time: value,
+      end_time: current.end_time || suggestedEndTime(value, current.class_category)
+    }));
+  };
 
   const venues = (options?.locations || []).filter(
     (venue) => venue.is_active || venue.id === values.location_id
@@ -83,7 +120,8 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
         ...(initial ? { class_group_id: initial.id, is_active: initial.is_active } : {}),
         location_id: values.location_id,
         coach_id: values.coach_id,
-        skill_level: values.skill_level,
+        class_category: values.class_category,
+        skill_level: values.skill_level || null,
         day_of_week: values.day_of_week,
         start_time: values.start_time,
         end_time: values.end_time,
@@ -100,9 +138,12 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
     }
   };
 
+  const levelReady = values.class_category !== 'standard' || Boolean(values.skill_level);
   const ready =
-    Boolean(values.location_id && values.coach_id && values.start_time && values.end_time) &&
-    values.max_capacity !== '';
+    Boolean(values.location_id && values.coach_id && values.class_category) &&
+    Boolean(values.start_time && values.end_time) &&
+    values.max_capacity !== '' &&
+    levelReady;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,8 +151,8 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
         <DialogHeader>
           <DialogTitle>{initial ? 'Edit class group' : 'Add class group'}</DialogTitle>
           <DialogDescription>
-            A class group is the weekly row: same weekday, time, pool, coach and level. Sessions are
-            created from it as separate dated classes.
+            A class group is the weekly row: same weekday, time, pool, coach, category and level.
+            Sessions are created from it as separate dated classes.
           </DialogDescription>
         </DialogHeader>
 
@@ -171,20 +212,56 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="group-level">Level</Label>
-            <Select value={values.skill_level} onValueChange={(value) => set({ skill_level: value })}>
-              <SelectTrigger id="group-level" aria-label="Level">
+            <Label htmlFor="group-category">Category</Label>
+            <Select value={values.class_category} onValueChange={changeCategory}>
+              <SelectTrigger id="group-category" aria-label="Category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {LEVELS.map((level) => (
-                  <SelectItem key={level.value} value={level.value}>
-                    {level.label}
+                {CLASS_CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {values.class_category === 'toddler' ? (
+            <div className="space-y-1">
+              <Label>Level</Label>
+              <p className="pt-2 text-sm text-muted-foreground">
+                Toddler classes use their own age-based grouping.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label htmlFor="group-level">Level</Label>
+              <Select
+                value={values.skill_level || (values.class_category === 'adult' ? 'mixed' : '')}
+                onValueChange={changeLevel}
+              >
+                <SelectTrigger id="group-level" aria-label="Level">
+                  <SelectValue placeholder="Choose a level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {values.class_category === 'adult' && (
+                    <SelectItem value="mixed">All / Mixed levels</SelectItem>
+                  )}
+                  {LEVEL_OPTIONS.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      {level.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {values.class_category === 'adult'
+                  ? 'Mixed levels means the class is open to every level.'
+                  : 'Standard classes need one level.'}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="group-day">Day of the week</Label>
@@ -211,7 +288,7 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
               id="group-start"
               type="time"
               value={values.start_time}
-              onChange={(event) => set({ start_time: event.target.value })}
+              onChange={(event) => changeStart(event.target.value)}
             />
           </div>
 
@@ -235,7 +312,9 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
               value={values.max_capacity}
               onChange={(event) => set({ max_capacity: event.target.value })}
             />
-            <p className="text-xs text-muted-foreground">Swimmers per session.</p>
+            <p className="text-xs text-muted-foreground">
+              Swimmers per session. A suggestion is filled in for the category; change it freely.
+            </p>
           </div>
 
           <div className="space-y-1 sm:col-span-2">

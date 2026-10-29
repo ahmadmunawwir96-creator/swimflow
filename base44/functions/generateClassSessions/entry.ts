@@ -23,6 +23,7 @@ import {
   writeClassAudit,
   buildClassContext,
   displayName,
+  resolveCategoryLevel,
   DAY_OF_WEEK_LABELS
 } from '../../shared/classAccess.ts';
 import {
@@ -135,6 +136,16 @@ export default async function(req) {
       return jsonError(409, 'That coach no longer has an active Coach role. Update the class group before creating sessions.');
     }
 
+    // The group's own category/level rule must still hold: a group whose category
+    // or level was left inconsistent is not silently defaulted into something else.
+    const groupCategoryLevel = resolveCategoryLevel(group.class_category, group.skill_level);
+    if (groupCategoryLevel.error) {
+      return jsonError(
+        409,
+        'This class group has no valid class category and level. Update the class group before creating sessions.'
+      );
+    }
+
     const dates = weeklySessionDates(from.value, to.value, group.day_of_week);
     if (!dates.length) {
       const dayLabel = DAY_OF_WEEK_LABELS[group.day_of_week] || 'chosen weekday';
@@ -189,7 +200,10 @@ export default async function(req) {
           branch_id: venue.branch_id,
           coach_id: group.coach_id,
           class_group_id: group.id,
-          skill_level: group.skill_level || null,
+          // Snapshot: the session keeps its own category and level from now on, so a
+          // later change to the group never rewrites this history.
+          class_category: groupCategoryLevel.value.category,
+          skill_level: groupCategoryLevel.value.level,
           max_capacity: typeof group.max_capacity === 'number' ? group.max_capacity : null,
           notes: group.notes || null,
           status: 'scheduled'

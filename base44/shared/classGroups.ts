@@ -12,6 +12,8 @@
 
 import {
   LEVEL_LABELS,
+  CLASS_CATEGORY_LABELS,
+  categoryLevelLabel,
   DAY_OF_WEEK_LABELS,
   dayOfWeekOfDate,
   addDays
@@ -36,9 +38,16 @@ export function weeklySessionDates(fromDate, toDate, dayOfWeek) {
   return dates;
 }
 
-// "Beginner Saturday" — used when the admin leaves the label blank.
-export function defaultGroupName(level, dayOfWeek) {
-  return `${LEVEL_LABELS[level] || 'Swimming'} ${DAY_OF_WEEK_LABELS[dayOfWeek] || ''}`.trim();
+// "Toddler Saturday" / "Beginner Saturday" / "Adult Saturday" — used when the
+// admin leaves the label blank. Category-aware, because Toddler and Adult are not
+// swimming levels.
+export function defaultGroupName(category, level, dayOfWeek) {
+  const base = category === 'toddler'
+    ? 'Toddler'
+    : category === 'adult'
+      ? (level ? `Adult ${LEVEL_LABELS[level]}` : 'Adult')
+      : (LEVEL_LABELS[level] || 'Swimming');
+  return `${base} ${DAY_OF_WEEK_LABELS[dayOfWeek] || ''}`.trim();
 }
 
 // Admin projection. Internal ids are acceptable because the viewer is authorized
@@ -50,6 +59,9 @@ export function projectClassGroup(group, ctx) {
   return {
     id: group.id,
     name: group.name || null,
+    category: group.class_category || null,
+    category_label: CLASS_CATEGORY_LABELS[group.class_category] || null,
+    type_label: categoryLevelLabel(group.class_category, group.skill_level),
     level: group.skill_level || null,
     level_label: LEVEL_LABELS[group.skill_level] || null,
     day_of_week: typeof group.day_of_week === 'number' ? group.day_of_week : null,

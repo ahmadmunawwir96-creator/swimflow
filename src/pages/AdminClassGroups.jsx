@@ -66,6 +66,7 @@ export default function AdminClassGroups() {
         class_group_id: group.id,
         location_id: group.location?.id,
         coach_id: group.coach?.id,
+        class_category: group.category,
         skill_level: group.level,
         day_of_week: group.day_of_week,
         start_time: group.start_time,

@@ -15,7 +15,7 @@ import {
   optionalText,
   requireTime,
   requireCapacity,
-  requireLevel,
+  resolveCategoryLevel,
   requireDayOfWeek,
   minutesOf,
   resolveAuthorizedVenue,
@@ -51,6 +51,7 @@ const ALLOWED_PARAMS = [
   'class_group_id',
   'location_id',
   'coach_id',
+  'class_category',
   'skill_level',
   'day_of_week',
   'start_time',
@@ -85,8 +86,10 @@ export default async function(req) {
     if (coachId.error) {
       return jsonError(400, 'Every class group needs a coach. Choose one from the list.');
     }
-    const level = requireLevel(body.skill_level);
-    if (level.error) return level.error;
+    // Category and level are validated together by the shared rule: standard needs
+    // a level, toddler has none, adult may be mixed. No default is ever assumed.
+    const categoryLevel = resolveCategoryLevel(body.class_category, body.skill_level);
+    if (categoryLevel.error) return categoryLevel.error;
     const dayOfWeek = requireDayOfWeek(body.day_of_week);
     if (dayOfWeek.error) return dayOfWeek.error;
     const startTime = requireTime(body.start_time, 'start_time');
@@ -132,13 +135,14 @@ export default async function(req) {
       }
     }
 
-    const label = name.value || defaultGroupName(level.value, dayOfWeek.value);
+    const label = name.value || defaultGroupName(categoryLevel.value.category, categoryLevel.value.level, dayOfWeek.value);
     const payload = {
       name: label,
       location_id: venue.id,
       branch_id: venue.branch_id,
       coach_id: coachId.value,
-      skill_level: level.value,
+      class_category: categoryLevel.value.category,
+      skill_level: categoryLevel.value.level,
       day_of_week: dayOfWeek.value,
       start_time: startTime.value,
       end_time: endTime.value,
@@ -179,6 +183,7 @@ export default async function(req) {
           ? {
               location_id: existing.location_id || null,
               coach_id: existing.coach_id || null,
+              class_category: existing.class_category || null,
               skill_level: existing.skill_level || null,
               day_of_week: existing.day_of_week ?? null,
               start_time: existing.start_time || null,

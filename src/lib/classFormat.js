@@ -96,6 +96,24 @@ export function levelLabel(level) {
   return LEVEL_LABEL[level] || 'Level not set';
 }
 
+export const CLASS_CATEGORY_LABEL = {
+  toddler: 'Toddler',
+  standard: 'Standard',
+  adult: 'Adult'
+};
+
+// How a class reads to staff and members. Toddler and Adult are categories, not
+// levels, so a null level never surfaces:
+//   toddler  -> 'Toddler'
+//   standard -> 'Standard · Beginner'
+//   adult    -> 'Adult · Beginner' or 'Adult · Mixed levels'
+export function classTypeLabel(category, level) {
+  if (category === 'toddler') return 'Toddler';
+  const label = LEVEL_LABEL[level] || null;
+  if (category === 'adult') return label ? `Adult · ${label}` : 'Adult · Mixed levels';
+  return label ? `Standard · ${label}` : 'Standard';
+}
+
 export function classStatusLabel(status) {
   return CLASS_STATUS_LABEL[status] || status || 'Scheduled';
 }

@@ -9,7 +9,7 @@ import {
   TableRow
 } from '@/components/ui/table';
 import ClassStatusBadge from '@/components/classes/ClassStatusBadge';
-import { shortDate, timeRange, levelLabel, weekdayShort } from '@/lib/classFormat';
+import { shortDate, timeRange, classTypeLabel, weekdayShort } from '@/lib/classFormat';
 
 // Desktop view of the admin schedule. The whole row opens the class, so staff do
 // not have to aim at a small action link.
@@ -24,7 +24,7 @@ export default function AdminClassTable({ classes }) {
             <TableHead>Date</TableHead>
             <TableHead>Time</TableHead>
             <TableHead>Class</TableHead>
-            <TableHead>Level</TableHead>
+            <TableHead>Class type</TableHead>
             <TableHead>Venue</TableHead>
             <TableHead>Coach</TableHead>
             <TableHead>Status</TableHead>
@@ -44,7 +44,7 @@ export default function AdminClassTable({ classes }) {
                 {timeRange(item.start_time, item.end_time)}
               </TableCell>
               <TableCell>{item.name || '—'}</TableCell>
-              <TableCell className="whitespace-nowrap">{levelLabel(item.level)}</TableCell>
+              <TableCell className="whitespace-nowrap">{classTypeLabel(item.category, item.level)}</TableCell>
               <TableCell>
                 <span className="block">{item.location.name || 'Venue missing'}</span>
                 {item.branch.name && (

@@ -12,12 +12,7 @@ import {
 } from '@/components/ui/select';
 import { AlertTriangle, MapPin, Save } from 'lucide-react';
 import { timeRange } from '@/lib/classFormat';
-
-const LEVELS = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' }
-];
+import { CLASS_CATEGORY_OPTIONS, LEVEL_OPTIONS } from '@/lib/classDefaults';
 
 // One form for creating and editing a session: venue, level, date, times, capacity,
 // coach, optional label and notes. Deliberately a single step — staff should not
@@ -35,7 +30,8 @@ export default function ClassForm({
 }) {
   const [values, setValues] = useState({
     location_id: initial?.location?.id || '',
-    skill_level: initial?.level || 'beginner',
+    class_category: initial?.category || 'standard',
+    skill_level: initial?.level || (initial ? '' : 'beginner'),
     class_date: initial?.date || '',
     start_time: initial?.start_time || '',
     end_time: initial?.end_time || '',
@@ -46,6 +42,21 @@ export default function ClassForm({
   });
 
   const set = (patch) => setValues((current) => ({ ...current, ...patch }));
+
+  // Toddler classes carry no swimming level, standard needs one, adult may be mixed.
+  const changeCategory = (next) => {
+    setValues((current) => ({
+      ...current,
+      class_category: next,
+      skill_level: next === 'toddler'
+        ? ''
+        : next === 'standard'
+          ? current.skill_level || 'beginner'
+          : current.skill_level
+    }));
+  };
+
+  const changeLevel = (next) => set({ skill_level: next === 'mixed' ? '' : next });
 
   // An inactive venue stays selectable only on the class that already uses it, so
   // editing a historic session never silently moves it to another pool.
@@ -59,7 +70,8 @@ export default function ClassForm({
   const submit = () => {
     onSubmit({
       location_id: values.location_id,
-      skill_level: values.skill_level,
+      class_category: values.class_category,
+      skill_level: values.class_category === 'toddler' ? null : (values.skill_level || null),
       class_date: values.class_date,
       start_time: values.start_time,
       end_time: values.end_time,
@@ -76,6 +88,8 @@ export default function ClassForm({
   };
 
   const noCoaches = coaches.length === 0;
+  const levelReady =
+    values.class_category !== 'standard' || Boolean(values.skill_level);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -106,7 +120,7 @@ export default function ClassForm({
             <ul className="space-y-1 text-sm text-muted-foreground">
               {conflict.conflicts.map((item, index) => (
                 <li key={index}>
-                  Already scheduled: {item.name || item.level_label || 'class'} ·{' '}
+                  Already scheduled: {item.name || item.type_label || 'class'} ·{' '}
                   {timeRange(item.start_time, item.end_time)}
                 </li>
               ))}
@@ -137,15 +151,48 @@ export default function ClassForm({
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="class-level">Level</Label>
-          <Select value={values.skill_level} onValueChange={(value) => set({ skill_level: value })}>
-            <SelectTrigger id="class-level" aria-label="Level"><SelectValue /></SelectTrigger>
+          <Label htmlFor="class-category">Category</Label>
+          <Select value={values.class_category} onValueChange={changeCategory}>
+            <SelectTrigger id="class-category" aria-label="Category"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {LEVELS.map((level) => (
-                <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
+              {CLASS_CATEGORY_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="class-level">Level</Label>
+          {values.class_category === 'toddler' ? (
+            <p className="pt-2 text-sm text-muted-foreground">
+              Toddler classes use their own age-based grouping.
+            </p>
+          ) : (
+            <>
+              <Select
+                value={values.skill_level || (values.class_category === 'adult' ? 'mixed' : '')}
+                onValueChange={changeLevel}
+              >
+                <SelectTrigger id="class-level" aria-label="Level">
+                  <SelectValue placeholder="Choose a level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {values.class_category === 'adult' && (
+                    <SelectItem value="mixed">All / Mixed levels</SelectItem>
+                  )}
+                  {LEVEL_OPTIONS.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {values.class_category === 'adult'
+                  ? 'Mixed levels means the class is open to every level.'
+                  : 'Standard classes need one level.'}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -225,7 +272,7 @@ export default function ClassForm({
             placeholder="e.g. Saturday beginners"
             onChange={(event) => set({ name: event.target.value })}
           />
-          <p className="text-xs text-muted-foreground">Leave blank to use the level name.</p>
+          <p className="text-xs text-muted-foreground">Leave blank to use the category and level.</p>
         </div>
 
         <div className="space-y-1 sm:col-span-2">
@@ -243,7 +290,7 @@ export default function ClassForm({
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="submit"
-          disabled={saving || venueChoices.length === 0 || noCoaches || !values.coach_id}
+          disabled={saving || venueChoices.length === 0 || noCoaches || !values.coach_id || !levelReady}
           className="w-full sm:w-auto"
         >
           <Save className="h-4 w-4" /> {saving ? 'Saving…' : submitLabel || 'Save class'}

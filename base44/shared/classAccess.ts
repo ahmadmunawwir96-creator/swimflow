@@ -23,6 +23,71 @@ export const LEVEL_LABELS = {
   advanced: 'Advanced'
 };
 
+// Class category is a SEPARATE dimension from swimming level. Toddler and Adult are
+// kinds of class, not skill levels, so they must never be squeezed into
+// beginner/intermediate/advanced:
+//   toddler  -> no swimming level at all (level stays null)
+//   standard -> exactly one level, required
+//   adult    -> one level, or null meaning mixed levels
+export const CLASS_CATEGORIES = ['toddler', 'standard', 'adult'];
+export const CLASS_CATEGORY_LABELS = {
+  toddler: 'Toddler',
+  standard: 'Standard',
+  adult: 'Adult'
+};
+
+export function requireClassCategory(value) {
+  if (typeof value !== 'string' || !CLASS_CATEGORIES.includes(value)) {
+    return { error: jsonError(400, 'Class category must be one of ' + CLASS_CATEGORIES.join(', ')) };
+  }
+  return { value };
+}
+
+// The ONE category/level rule, shared by Class Group and Class writes so the two can
+// never drift. A contradictory combination is refused rather than silently
+// corrected: the form clears the level itself when the admin picks Toddler.
+export function resolveCategoryLevel(category, rawLevel) {
+  const cat = requireClassCategory(category);
+  if (cat.error) return { error: cat.error };
+
+  const hasLevel = typeof rawLevel === 'string' && rawLevel.trim() !== '';
+  const level = hasLevel ? rawLevel.trim() : null;
+  if (level !== null && !LEVELS.includes(level)) {
+    return { error: jsonError(400, 'Level must be one of ' + LEVELS.join(', ')) };
+  }
+
+  if (cat.value === 'toddler') {
+    if (level !== null) {
+      return { error: jsonError(400, 'Toddler classes do not use a swimming level. Leave the level empty.') };
+    }
+    return { value: { category: cat.value, level: null } };
+  }
+  if (cat.value === 'standard') {
+    if (level === null) {
+      return { error: jsonError(400, 'Standard classes need a level: ' + LEVELS.join(', ')) };
+    }
+    return { value: { category: cat.value, level } };
+  }
+  return { value: { category: cat.value, level } };
+}
+
+// What staff and members read. Null never leaks: a toddler class is just
+// "Toddler", a level-less adult class is "Adult · Mixed levels".
+export function categoryLevelLabel(category, level) {
+  const levelLabel = LEVEL_LABELS[level] || null;
+  if (category === 'toddler') return 'Toddler';
+  if (category === 'adult') return levelLabel ? `Adult · ${levelLabel}` : 'Adult · Mixed levels';
+  return levelLabel ? `Standard · ${levelLabel}` : 'Standard';
+}
+
+// Default label when the admin leaves the name blank.
+export function defaultClassLabel(category, level) {
+  if (category === 'toddler') return 'Toddler class';
+  const levelLabel = LEVEL_LABELS[level] || null;
+  if (category === 'adult') return levelLabel ? `Adult ${levelLabel} class` : 'Adult class';
+  return levelLabel ? `${levelLabel} class` : 'Swimming class';
+}
+
 // Cancellation types exist now so later token logic can distinguish an ordinary
 // cancellation from an academy-wide closure without a migration. Any further detail
 // (why the academy closed) belongs in the free-text cancellation_reason.
@@ -362,7 +427,8 @@ export function summariseConflicts(rows) {
     start_time: row.start_time || null,
     end_time: row.end_time || null,
     name: row.name || null,
-    level_label: LEVEL_LABELS[row.skill_level] || null
+    level_label: LEVEL_LABELS[row.skill_level] || null,
+    type_label: categoryLevelLabel(row.class_category, row.skill_level)
   }));
 }
 
@@ -411,6 +477,9 @@ export function projectAdminClass(cls, ctx) {
     date: cls.class_date || null,
     start_time: cls.start_time || null,
     end_time: cls.end_time || null,
+    category: cls.class_category || null,
+    category_label: CLASS_CATEGORY_LABELS[cls.class_category] || null,
+    type_label: categoryLevelLabel(cls.class_category, cls.skill_level),
     level: cls.skill_level || null,
     level_label: LEVEL_LABELS[cls.skill_level] || null,
     capacity: typeof cls.max_capacity === 'number' ? cls.max_capacity : null,
@@ -449,6 +518,9 @@ export function projectMemberClass(cls, ctx) {
     date: cls.class_date || null,
     start_time: cls.start_time || null,
     end_time: cls.end_time || null,
+    category: cls.class_category || null,
+    category_label: CLASS_CATEGORY_LABELS[cls.class_category] || null,
+    type_label: categoryLevelLabel(cls.class_category, cls.skill_level),
     level: cls.skill_level || null,
     level_label: LEVEL_LABELS[cls.skill_level] || null,
     name: cls.name || null,
