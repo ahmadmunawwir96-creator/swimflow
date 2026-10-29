@@ -6,6 +6,7 @@ import {
   asArray,
   SERVER_CONTROLLED_FIELDS
 } from '../../shared/studentProfile.ts';
+import { serverFailure } from '../../shared/directoryAccess.ts';
 
 // Guardian fields and relationship are also protected on update (consent history must not be rewritten here).
 const UPDATE_PROTECTED = [...SERVER_CONTROLLED_FIELDS, 'relationship', 'consent_guardian_name', 'consent_guardian_phone'];
@@ -82,6 +83,8 @@ export default async function(req) {
     if (consentReviewRecommended) result.consent_review_recommended = true;
     return Response.json(result, { status: 200 });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Diagnostics stay server-side: the client never sees SDK or database details.
+    console.error('[updateMyStudentProfile] unexpected failure', error && (error.stack || error.message || error));
+    return serverFailure('updateMyStudentProfile');
   }
 }
