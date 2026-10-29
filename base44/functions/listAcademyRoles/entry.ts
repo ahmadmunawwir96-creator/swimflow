@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { serverFailure } from '../../shared/directoryAccess.ts';
 import {
   findRoleByName,
   getActiveAcademyAdminAssignment,
@@ -61,6 +62,8 @@ export default async function(req) {
     const out = assignments.map(a => publicAssignment(a, roleMap[a.role_id], userMap[a.user_id]));
     return Response.json({ assignments: out, count: out.length, truncated: assignments.length === 100 }, { status: 200 });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Diagnostics stay server-side: the client never sees SDK or database details.
+    console.error('[listAcademyRoles] unexpected failure', error && (error.stack || error.message || error));
+    return serverFailure('listAcademyRoles');
   }
 }

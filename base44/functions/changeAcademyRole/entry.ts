@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { serverFailure } from '../../shared/directoryAccess.ts';
 import {
   ASSIGNABLE_ROLES,
   canAppAdminChange,
@@ -116,6 +117,8 @@ export default async function(req) {
       }, { status: 500 });
     }
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Diagnostics stay server-side: the client never sees SDK or database details.
+    console.error('[changeAcademyRole] unexpected failure', error && (error.stack || error.message || error));
+    return serverFailure('changeAcademyRole');
   }
 }
