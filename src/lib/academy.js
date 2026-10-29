@@ -30,8 +30,6 @@ export const academyApi = {
     call('changeAcademyRole', { target_user_id, from_role_name, to_role_name }),
   promoteToAdmin: (target_user_id) =>
     call('promoteToAcademyAdmin', { target_user_id }),
-  grantAppAdmin: (target_user_id) =>
-    call('grantAppAdmin', { target_user_id }),
   listRoles: (target_user_id) =>
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
   listStudents: (params) => call('listStudents', params || {}),

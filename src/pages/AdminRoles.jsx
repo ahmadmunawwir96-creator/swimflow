@@ -24,16 +24,15 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown, AlertTriangle } from 'lucide-react';
 
-// Academy admins may move a member between any academy role. 'app_admin' is the
-// built-in app Admin role, granted additively (academy admins only).
+// Academy admins may move a member between any academy role.
 const ACADEMY_ADMIN_TARGETS = {
   student: ['parent', 'coach'],
   parent: ['student', 'coach'],
   coach: ['student', 'parent']
 };
 // An ordinary app admin (platform admin without an academy-admin role) may only
-// make the everyday transitions. Coach-from-parent and App Admin are reserved
-// for academy admins — mirrored server-side in changeAcademyRole.
+// make the everyday transitions. Coach-from-parent is reserved for academy
+// admins — mirrored server-side in changeAcademyRole.
 const APP_ADMIN_TARGETS = {
   student: ['parent', 'coach'],
   parent: ['student']
@@ -74,11 +73,7 @@ export default function AdminRoles() {
   const targetsFor = (a) => {
     if (!a.is_active) return [];
     const matrix = isAcademyAdmin ? ACADEMY_ADMIN_TARGETS : APP_ADMIN_TARGETS;
-    const base = matrix[a.role_name] || [];
-    // Platform Admin is system-owner authority only — a Swimflow Admin never sees
-    // this option, and the server refuses it regardless of the UI.
-    const canGrantAdmin = isAppAdmin && (a.role_name === 'student' || a.role_name === 'parent');
-    return canGrantAdmin ? [...base, 'app_admin'] : base;
+    return matrix[a.role_name] || [];
   };
 
   const search = async () => {
@@ -143,21 +138,6 @@ export default function AdminRoles() {
 
   const changeRole = async (a, to) => {
     if (!to) return;
-    // App Admin is the built-in platform role, granted additively: the member's
-    // Student/Parent/Coach assignment is untouched.
-    if (to === 'app_admin') {
-      if (!confirm(`Make ${a.user_name || a.user_email || 'this user'} an app Admin? This grants full administrator access to the app.`)) return;
-      setBusy(true);
-      try {
-        await academyApi.grantAppAdmin(a.user_id);
-        toast({ title: 'App Admin granted', description: 'The member now has full administrator access.' });
-      } catch (e) {
-        toast({ title: 'Promotion failed', description: e.message, variant: 'destructive' });
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
     if (!confirm(`Change this user's role from ${ROLE_LABEL[a.role_name]} to ${ROLE_LABEL[to]}?`)) return;
     setBusy(true);
     try {
@@ -210,8 +190,8 @@ export default function AdminRoles() {
         </h1>
         <p className="text-muted-foreground">
           {isAcademyAdmin
-            ? 'Assign Student, Parent, or Coach, promote a member to app Admin, or grant Academy Admin. Grants keep existing roles; the last active Academy Admin cannot be removed.'
-            : 'Change members between Student, Parent, and Coach. Coach-from-parent and Admin grants are reserved for Academy Admins.'}
+            ? 'Assign Student, Parent, or Coach, or grant Academy Admin. Grants keep existing roles; the last active Academy Admin cannot be removed. Platform administrator access is managed by the app owner in Base44.'
+            : 'Change members between Student, Parent, and Coach. Coach-from-parent and Academy Admin grants are reserved for Academy Admins. Platform administrator access is managed by the app owner in Base44.'}
         </p>
       </div>
 
@@ -313,7 +293,7 @@ export default function AdminRoles() {
                                 <DropdownMenuContent align="end">
                                   {targets.map((to) => (
                                     <DropdownMenuItem key={to} onSelect={() => changeRole(a, to)}>
-                                      {to === 'app_admin' ? 'Make App Admin' : `Change to ${ROLE_LABEL[to]}`}
+                                      {`Change to ${ROLE_LABEL[to]}`}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>
