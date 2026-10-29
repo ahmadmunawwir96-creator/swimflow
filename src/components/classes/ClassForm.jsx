@@ -28,14 +28,15 @@ export default function ClassForm({
   submitLabel,
   onCancel
 }) {
+  // A new class starts with NO category and NO level: both are explicit choices.
   const [values, setValues] = useState({
     location_id: initial?.location?.id || '',
-    class_category: initial?.category || 'standard',
-    skill_level: initial?.level || (initial ? '' : 'beginner'),
+    class_category: initial?.category || '',
+    skill_level: initial?.level || '',
     class_date: initial?.date || '',
     start_time: initial?.start_time || '',
     end_time: initial?.end_time || '',
-    max_capacity: initial?.capacity ?? 6,
+    max_capacity: initial?.capacity ?? '',
     coach_id: initial?.coach?.id || '',
     name: initial?.name || '',
     notes: initial?.notes || ''
@@ -44,15 +45,13 @@ export default function ClassForm({
   const set = (patch) => setValues((current) => ({ ...current, ...patch }));
 
   // Toddler classes carry no swimming level, standard needs one, adult may be mixed.
+  // Switching category never inserts a level: Standard demands an explicit choice,
+  // and a level already chosen survives the switch.
   const changeCategory = (next) => {
     setValues((current) => ({
       ...current,
       class_category: next,
-      skill_level: next === 'toddler'
-        ? ''
-        : next === 'standard'
-          ? current.skill_level || 'beginner'
-          : current.skill_level
+      skill_level: next === 'toddler' ? '' : current.skill_level
     }));
   };
 
@@ -153,7 +152,9 @@ export default function ClassForm({
         <div className="space-y-1">
           <Label htmlFor="class-category">Category</Label>
           <Select value={values.class_category} onValueChange={changeCategory}>
-            <SelectTrigger id="class-category" aria-label="Category"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="class-category" aria-label="Category">
+              <SelectValue placeholder="Choose a category" />
+            </SelectTrigger>
             <SelectContent>
               {CLASS_CATEGORY_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -173,6 +174,7 @@ export default function ClassForm({
               <Select
                 value={values.skill_level || (values.class_category === 'adult' ? 'mixed' : '')}
                 onValueChange={changeLevel}
+                disabled={!values.class_category}
               >
                 <SelectTrigger id="class-level" aria-label="Level">
                   <SelectValue placeholder="Choose a level" />
@@ -187,9 +189,11 @@ export default function ClassForm({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {values.class_category === 'adult'
-                  ? 'Mixed levels means the class is open to every level.'
-                  : 'Standard classes need one level.'}
+                {!values.class_category
+                  ? 'Choose a category first.'
+                  : values.class_category === 'adult'
+                    ? 'Mixed levels means the class is open to every level.'
+                    : 'Standard classes need one level.'}
               </p>
             </>
           )}
@@ -290,7 +294,14 @@ export default function ClassForm({
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="submit"
-          disabled={saving || venueChoices.length === 0 || noCoaches || !values.coach_id || !levelReady}
+          disabled={
+            saving ||
+            venueChoices.length === 0 ||
+            noCoaches ||
+            !values.coach_id ||
+            !values.class_category ||
+            !levelReady
+          }
           className="w-full sm:w-auto"
         >
           <Save className="h-4 w-4" /> {saving ? 'Saving…' : submitLabel || 'Save class'}

@@ -24,21 +24,26 @@ import { DAY_OF_WEEK_LABELS } from '@/lib/classFormat';
 import {
   CLASS_CATEGORY_OPTIONS,
   LEVEL_OPTIONS,
-  suggestedCapacity,
-  suggestedEndTime
+  followCapacity,
+  followEndTime,
+  suggestedCapacity
 } from '@/lib/classDefaults';
 
+// A new group starts with NO category and NO level: both are explicit choices.
 const EMPTY = {
   location_id: '',
   coach_id: '',
-  class_category: 'standard',
-  skill_level: 'beginner',
+  class_category: '',
+  skill_level: '',
   day_of_week: 6,
   start_time: '',
   end_time: '',
-  max_capacity: 6,
+  max_capacity: '',
   name: '',
-  notes: ''
+  notes: '',
+  // The suggestion each field currently follows (never sent to the server).
+  suggested_capacity: '',
+  suggested_end: ''
 };
 
 // Add or edit one Class Group. Deliberately a single dialog, not a wizard: venue,
@@ -56,14 +61,18 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
         ? {
             location_id: initial.location?.id || '',
             coach_id: initial.coach?.id || '',
-            class_category: initial.category || 'standard',
+            class_category: initial.category || '',
             skill_level: initial.level || '',
             day_of_week: typeof initial.day_of_week === 'number' ? initial.day_of_week : 6,
             start_time: initial.start_time || '',
             end_time: initial.end_time || '',
-            max_capacity: initial.capacity ?? 6,
+            max_capacity: initial.capacity ?? '',
             name: initial.name || '',
-            notes: initial.notes || ''
+            notes: initial.notes || '',
+            // A stored capacity that still matches its own suggestion counts as
+            // untouched; anything else is the admin's own value.
+            suggested_capacity: suggestedCapacity(initial.category, initial.level),
+            suggested_end: ''
           }
         : EMPTY
     );
@@ -71,38 +80,46 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
 
   const set = (patch) => setValues((current) => ({ ...current, ...patch }));
 
+  // A new group only: an existing group keeps its own times and capacity until the
+  // admin edits them.
+  const isNew = !initial;
+
   // Toddler: no swimming level at all (the form clears it before sending).
-  // Standard: a level is required. Adult: a level is optional — empty means mixed.
+  // Standard: a level is required and never inserted for the admin.
+  // Adult: a level is optional — empty means mixed.
+  // Capacity and end time follow their suggestion only while the admin has not
+  // typed a value of their own.
   const changeCategory = (next) => {
     setValues((current) => {
-      const level = next === 'toddler'
-        ? ''
-        : next === 'standard'
-          ? current.skill_level || 'beginner'
-          : current.skill_level;
+      const level = next === 'toddler' ? '' : current.skill_level;
       return {
         ...current,
         class_category: next,
         skill_level: level,
-        max_capacity: suggestedCapacity(next, level)
+        ...followCapacity(current, next, level),
+        ...followEndTime(current, current.start_time, next, isNew)
       };
     });
   };
 
   const changeLevel = (next) => {
-    setValues((current) => ({
-      ...current,
-      skill_level: next === 'mixed' ? '' : next,
-      max_capacity: suggestedCapacity(current.class_category, next === 'mixed' ? '' : next)
-    }));
+    setValues((current) => {
+      const level = next === 'mixed' ? '' : next;
+      return {
+        ...current,
+        skill_level: level,
+        ...followCapacity(current, current.class_category, level)
+      };
+    });
   };
 
-  // Duration is a form suggestion only: an end time the admin already set is kept.
+  // Duration is a suggestion for new groups only: a start time change recalculates
+  // the end time unless the admin already set one.
   const changeStart = (value) => {
     setValues((current) => ({
       ...current,
       start_time: value,
-      end_time: current.end_time || suggestedEndTime(value, current.class_category)
+      ...followEndTime(current, value, current.class_category, isNew)
     }));
   };
 
@@ -215,7 +232,7 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
             <Label htmlFor="group-category">Category</Label>
             <Select value={values.class_category} onValueChange={changeCategory}>
               <SelectTrigger id="group-category" aria-label="Category">
-                <SelectValue />
+                <SelectValue placeholder="Choose a category" />
               </SelectTrigger>
               <SelectContent>
                 {CLASS_CATEGORY_OPTIONS.map((option) => (
@@ -240,6 +257,7 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
               <Select
                 value={values.skill_level || (values.class_category === 'adult' ? 'mixed' : '')}
                 onValueChange={changeLevel}
+                disabled={!values.class_category}
               >
                 <SelectTrigger id="group-level" aria-label="Level">
                   <SelectValue placeholder="Choose a level" />
@@ -256,9 +274,11 @@ export default function ClassGroupFormDialog({ open, onOpenChange, initial, opti
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {values.class_category === 'adult'
-                  ? 'Mixed levels means the class is open to every level.'
-                  : 'Standard classes need one level.'}
+                {!values.class_category
+                  ? 'Choose a category first.'
+                  : values.class_category === 'adult'
+                    ? 'Mixed levels means the class is open to every level.'
+                    : 'Standard classes need one level.'}
               </p>
             </div>
           )}
