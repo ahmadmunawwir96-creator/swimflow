@@ -19,6 +19,7 @@ import AdminStudentProfile from '@/pages/AdminStudentProfile';
 import AdminClasses from '@/pages/AdminClasses';
 import AdminClassDetail from '@/pages/AdminClassDetail';
 import AdminClassEditor from '@/pages/AdminClassEditor';
+import AdminClassGroups from '@/pages/AdminClassGroups';
 import MemberClasses from '@/pages/MemberClasses';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/classes/new" element={<AdminClassEditor />} />
           <Route path="/admin/classes/:id" element={<AdminClassDetail />} />
           <Route path="/admin/classes/:id/edit" element={<AdminClassEditor />} />
+          <Route path="/admin/class-groups" element={<AdminClassGroups />} />
           <Route path="/classes" element={<MemberClasses />} />
         </Route>
       </Route>

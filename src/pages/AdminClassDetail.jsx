@@ -135,7 +135,7 @@ export default function AdminClassDetail() {
                   </Button>
                 )}
                 {item.status === 'cancelled' ? (
-                  <Button variant="outline" onClick={() => restore(false)} disabled={saving} className="w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => restore()} disabled={saving} className="w-full sm:w-auto">
                     <RotateCcw className="h-4 w-4" /> {saving ? 'Restoring…' : 'Restore class'}
                   </Button>
                 ) : (
