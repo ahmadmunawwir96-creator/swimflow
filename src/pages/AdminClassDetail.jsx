@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import NoticePanel from '@/components/common/NoticePanel';
 import ClassStatusBadge from '@/components/classes/ClassStatusBadge';
 import CancelClassDialog from '@/components/classes/CancelClassDialog';
-import RestoreClassNotice from '@/components/classes/RestoreClassNotice';
 import { ArrowLeft, Pencil, CalendarDays, Ban, RotateCcw, ShieldAlert } from 'lucide-react';
 import { classDate, timeRange, levelLabel, classStatusLabel, cancellationTypeLabel, capacityLabel } from '@/lib/classFormat';
 
@@ -30,7 +29,6 @@ export default function AdminClassDetail() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState(null);
-  const [restoreConflict, setRestoreConflict] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +58,6 @@ export default function AdminClassDetail() {
     try {
       await academyApi.cancelClass(id, values);
       setCancelOpen(false);
-      setRestoreConflict(null);
       await load();
     } catch (e) {
       setActionError(e.message || 'The class could not be cancelled.');
@@ -69,26 +66,17 @@ export default function AdminClassDetail() {
     }
   };
 
-  // Restoring re-runs the server-side checks: an inactive venue or a clashing coach
-  // is refused outright (the class stays cancelled), while a clashing venue needs an
-  // explicit confirmation.
-  const restore = async (confirmOverlap) => {
+  // Restoring re-runs the server-side checks. Anything that no longer holds — an
+  // inactive venue, a coach who now teaches something else at that hour — is
+  // refused outright and the class stays cancelled. A shared venue never is.
+  const restore = async () => {
     setSaving(true);
     setActionError(null);
     try {
-      await academyApi.cancelClass(id, {
-        cancel: false,
-        ...(confirmOverlap ? { confirm_location_overlap: true } : {})
-      });
-      setRestoreConflict(null);
+      await academyApi.cancelClass(id, { cancel: false });
       await load();
     } catch (e) {
-      if (e.status === 409 && e.data?.requires_confirmation) {
-        setRestoreConflict({ message: e.message, conflicts: e.data.conflicts || [] });
-      } else {
-        setRestoreConflict(null);
-        setActionError(e.message || 'The cancellation could not be reversed.');
-      }
+      setActionError(e.message || 'The cancellation could not be reversed.');
     } finally {
       setSaving(false);
     }
@@ -163,16 +151,6 @@ export default function AdminClassDetail() {
               <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {actionError}
               </div>
-            )}
-
-            {restoreConflict && (
-              <RestoreClassNotice
-                message={restoreConflict.message}
-                conflicts={restoreConflict.conflicts}
-                busy={saving}
-                onConfirm={() => restore(true)}
-                onDismiss={() => setRestoreConflict(null)}
-              />
             )}
 
             {item.status === 'cancelled' && (
