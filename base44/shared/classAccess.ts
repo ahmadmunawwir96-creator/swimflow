@@ -11,6 +11,7 @@
 import { asArray } from './studentProfile.ts';
 import { jsonError } from './directoryAccess.ts';
 import { getActiveAssignment, resolveUserMap } from './academyRoles.ts';
+import { readAllPages, READ_PAGE_SIZE } from './pagination.ts';
 
 // The academy operates in Malaysian time. "Today" is resolved in this zone so an
 // evening session never drops out of "upcoming" eight hours early.
@@ -414,18 +415,26 @@ export async function findCoachConflicts(base44, input) {
     : [input.class_date].filter(Boolean);
   if (!input.coach_id || !dates.length) return [];
 
-  const page = await base44.asServiceRole.entities.Class.filter(
-    {
-      coach_id: input.coach_id,
-      status: 'scheduled',
-      class_date: dates.length === 1 ? dates[0] : { $in: dates }
-    },
-    { limit: 200 }
+  // Every page, not just the first. A conflicting session sitting past the page
+  // boundary must still be found, or the caller writes a real overlap. Reads the
+  // complete match set or throws; class_date sort is carried with the cursor on
+  // every page so the walk is deterministic and consistent.
+  const rows = await readAllPages(
+    ({ cursor }) =>
+      base44.asServiceRole.entities.Class.filter(
+        {
+          coach_id: input.coach_id,
+          status: 'scheduled',
+          class_date: dates.length === 1 ? dates[0] : { $in: dates }
+        },
+        { limit: READ_PAGE_SIZE, sort: 'class_date', cursor }
+      ),
+    { label: 'coach conflicts' }
   );
   const start = minutesOf(input.start_time);
   const end = minutesOf(input.end_time);
 
-  return asArray(page).filter((row) => {
+  return rows.filter((row) => {
     if (!row || row.id === input.exclude_id) return false;
     const rowStart = minutesOf(row.start_time);
     const rowEnd = minutesOf(row.end_time);

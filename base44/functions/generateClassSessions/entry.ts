@@ -8,7 +8,7 @@ import {
 } from '../../shared/directoryAccess.ts';
 import { resolveAdminBranchScope, isScopeEmpty } from '../../shared/adminScope.ts';
 import { getActiveAssignment } from '../../shared/academyRoles.ts';
-import { asArray } from '../../shared/studentProfile.ts';
+import { readAllPages, READ_PAGE_SIZE } from '../../shared/pagination.ts';
 import {
   createRoleCache,
   authorizeAcademyAdminWithCache,
@@ -176,12 +176,19 @@ export default async function(req) {
     }
 
     // ---- duplicate protection: whatever already exists wins, always ----
-    const existingPage = await base44.asServiceRole.entities.Class.filter(
-      { class_group_id: group.id, class_date: { $gte: from.value, $lte: to.value } },
-      { limit: 200 }
+    // Reads EVERY existing session in the range, across pages. A single page would
+    // let a date past the boundary look free and create a duplicate; a cancelled
+    // session counts here too, which is why its status is deliberately not filtered.
+    const existingRows = await readAllPages(
+      ({ cursor }) =>
+        base44.asServiceRole.entities.Class.filter(
+          { class_group_id: group.id, class_date: { $gte: from.value, $lte: to.value } },
+          { limit: READ_PAGE_SIZE, sort: 'class_date', cursor }
+        ),
+      { label: 'existing group sessions' }
     );
     const existingDates = new Set(
-      asArray(existingPage)
+      existingRows
         .map((row) => row.class_date)
         .filter(Boolean)
     );
