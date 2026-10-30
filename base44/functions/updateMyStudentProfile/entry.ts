@@ -7,6 +7,7 @@ import {
   SERVER_CONTROLLED_FIELDS
 } from '../../shared/studentProfile.ts';
 import { serverFailure } from '../../shared/directoryAccess.ts';
+import { isNotFoundError } from '../../shared/sdkErrors.ts';
 
 // Guardian fields and relationship are also protected on update (consent history must not be rewritten here).
 const UPDATE_PROTECTED = [...SERVER_CONTROLLED_FIELDS, 'relationship', 'consent_guardian_name', 'consent_guardian_phone'];
@@ -35,7 +36,7 @@ export default async function(req) {
     if (rej) return rej;
 
     // Service role bypasses RLS, so we verify ownership explicitly after loading.
-    // Wrap the lookup so a malformed/missing id yields a clean 404, not a 500.
+    // A malformed/missing id yields a clean 404 — but ONLY a genuine 404 does.
     let student;
     try {
       const studentPage = await base44.asServiceRole.entities.Student.filter(
@@ -47,7 +48,12 @@ export default async function(req) {
         return Response.json({ error: 'Student profile not found' }, { status: 404 });
       }
       student = students[0];
-    } catch {
+    } catch (error) {
+      // Only a GENUINE "no such profile" is a 404. A rate limit, a database outage or
+      // any other SDK failure is rethrown to the handler's existing generic 500 — told
+      // to the member as "profile not found" it would be a lie, and they would be sent
+      // looking for a profile that still exists. Diagnostics stay server-side.
+      if (!isNotFoundError(error)) throw error;
       return Response.json({ error: 'Student profile not found' }, { status: 404 });
     }
 

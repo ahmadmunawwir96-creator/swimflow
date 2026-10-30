@@ -36,9 +36,19 @@ export function jsonError(status, message, extra) {
   return Response.json(body, { status });
 }
 
+// Strict YYYY-MM-DD check for a REAL calendar date.
+//
+// Date.parse() alone is not enough: it normalizes impossible dates instead of
+// rejecting them (2026-02-31 becomes March 3, 2025-02-29 becomes March 1), so a
+// typo would silently be stored as a different day and shift the derived age.
+// Parse as UTC midnight, then require the ISO round trip to return the exact same
+// string — the same check the scheduler's requireDate performs. A real leap day
+// (2024-02-29, 2000-02-29) survives the round trip; 1900-02-29 and 2025-02-29 do not.
 export function isValidISODate(d) {
-  if (typeof d !== 'string') return false;
-  return /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
+  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const parsed = new Date(d + 'T00:00:00Z');
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().slice(0, 10) === d;
 }
 
 export function todayISODate() {
