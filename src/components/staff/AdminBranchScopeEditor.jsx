@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { academyApi } from '@/lib/academy';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -36,34 +36,61 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
+  const requestVersion = useRef(0);
+  const currentTarget = useRef('');
+  const saveInFlight = useRef(false);
+
+  const selectTarget = (id) => {
+    if (saveInFlight.current) return;
+    currentTarget.current = id;
+    requestVersion.current += 1;
+    setTargetId(id);
+    setAccess(null);
+    setLoadError('');
+    setNotice('');
+    setMode(null);
+    setSelectedIds([]);
+  };
 
   const load = async (id) => {
+    if (!id || currentTarget.current !== id) return false;
+    const version = ++requestVersion.current;
+    const isCurrent = () => version === requestVersion.current && currentTarget.current === id;
+    setAccess(null);
     setLoading(true);
     setLoadError('');
     try {
       const res = await academyApi.getAdminBranchAccess(id);
+      if (!isCurrent()) return false;
+      if (res?.target_user?.user_id !== id) {
+        throw new Error('The server returned access for a different admin. Reload before trying again.');
+      }
       setAccess(res);
       setMode(null);
       setSelectedIds([]);
       return true;
     } catch (e) {
+      if (!isCurrent()) return false;
       setAccess(null);
       setLoadError(e.message || 'Branch access could not be loaded right now.');
       return false;
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
   useEffect(() => {
+    currentTarget.current = targetId;
     if (!targetId) {
       setAccess(null);
       setLoadError('');
       setMode(null);
       setSelectedIds([]);
-      return;
+      setLoading(false);
+    } else {
+      load(targetId);
     }
-    load(targetId);
+    return () => { requestVersion.current += 1; };
   }, [targetId]);
 
   const toggleBranch = (id) => {
@@ -72,7 +99,10 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
 
   const branches = access?.branches || [];
   const targetName = access?.target_user?.full_name || access?.target_user?.email || 'This admin';
-  const canApply = !!targetId && !!access && !saving && (mode === 'all' || (mode === 'specific' && selectedIds.length > 0));
+  const accessMatchesTarget = !!targetId && access?.target_user?.user_id === targetId;
+  const canApply = accessMatchesTarget && !loading && !saving &&
+    (mode === 'all' || (mode === 'specific' && selectedIds.length > 0 &&
+      selectedIds.every((id) => branches.some((branch) => branch.id === id))));
 
   const planLabel =
     mode === 'all'
@@ -83,30 +113,33 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
           .join(', ');
 
   const apply = async () => {
-    if (!canApply) return;
+    if (!canApply || saveInFlight.current || currentTarget.current !== targetId ||
+        access?.target_user?.user_id !== targetId) return;
+    const intendedId = targetId;
+    const payload = mode === 'all'
+      ? { target_user_id: intendedId, all_branches: true }
+      : { target_user_id: intendedId, all_branches: false, branch_ids: [...selectedIds] };
+    saveInFlight.current = true;
     setSaving(true);
     setNotice('');
     try {
-      await academyApi.assignAdminBranches(
-        mode === 'all'
-          ? { target_user_id: targetId, all_branches: true }
-          : { target_user_id: targetId, all_branches: false, branch_ids: selectedIds }
-      );
+      await academyApi.assignAdminBranches(payload);
       toast({ title: 'Branch access updated' });
       if (onApplied) onApplied();
-      await load(targetId);
+      const reloaded = await load(intendedId);
+      if (!reloaded && currentTarget.current === intendedId) {
+        setNotice('Branch access was saved, but current access could not be reloaded. Reload before making another change.');
+      }
     } catch (e) {
-      // The scope may have been partly applied, so never say "nothing changed".
-      // Re-read the authoritative state; only claim it if the read also fails.
       toast({ title: 'Branch access not confirmed', description: e.message, variant: 'destructive' });
-      // Never claim "nothing changed": part of the scope may already be applied.
-      const reloaded = await load(targetId);
-      setNotice(
-        reloaded
-          ? 'The change failed: ' + (e.message || 'unknown error') + '. Current access is shown above.'
-          : 'The change could not be confirmed, and current access could not be reloaded. Reload this page before trying again.'
-      );
+      const reloaded = await load(intendedId);
+      if (currentTarget.current === intendedId) {
+        setNotice(reloaded
+          ? 'The save was not confirmed. Some changes may already have been applied. Current access is shown below.'
+          : 'The save was not confirmed, and current access could not be reloaded. Some changes may already have been applied. Reload before trying again.');
+      }
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   };
@@ -132,7 +165,7 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
             <Label htmlFor={ADMIN_SELECT_ID} className="text-sm font-medium">
               Academy admin
             </Label>
-            <Select value={targetId} onValueChange={setTargetId} disabled={saving}>
+            <Select value={targetId} onValueChange={selectTarget} disabled={saving}>
               <SelectTrigger id={ADMIN_SELECT_ID}>
                 <SelectValue placeholder="Choose an admin" />
               </SelectTrigger>
@@ -161,7 +194,13 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
           </div>
         )}
 
-        {access && !loading && (
+        {notice && (
+          <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            {notice}
+          </p>
+        )}
+
+        {accessMatchesTarget && !loading && (
           <>
             <div className="space-y-2 rounded-md border p-3">
               <p className="text-sm font-medium">Current access</p>
@@ -176,12 +215,6 @@ export default function AdminBranchScopeEditor({ admins, onApplied }) {
               branches={branches}
               disabled={saving}
             />
-
-            {notice && (
-              <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                {notice}
-              </p>
-            )}
 
             <div className="flex flex-wrap items-center gap-3 border-t pt-3">
               <Button onClick={apply} disabled={!canApply}>
