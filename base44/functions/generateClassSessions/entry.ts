@@ -15,6 +15,7 @@ import {
   requireId,
   requireDate,
   requireTime,
+  requireCapacity,
   minutesOf,
   daysBetween,
   findCoachConflicts,
@@ -97,8 +98,11 @@ export default async function(req) {
     if (group.is_active === false) {
       return jsonError(400, 'This class group is inactive. Activate it before creating sessions.');
     }
-    if (typeof group.day_of_week !== 'number' || group.day_of_week < 0 || group.day_of_week > 6) {
-      return jsonError(409, 'This class group has no weekday set. Update it before creating sessions.');
+    // Stored weekday must already be a whole number 0..6. A fractional, textual or
+    // out-of-range value is refused rather than rounded, parsed or shifted onto a
+    // real weekday, so sessions can never land on a day the group did not mean.
+    if (!Number.isInteger(group.day_of_week) || group.day_of_week < 0 || group.day_of_week > 6) {
+      return jsonError(409, 'This class group has no valid weekday set. Update the class group before creating sessions.');
     }
     const storedStart = requireTime(group.start_time, 'start_time');
     const storedEnd = requireTime(group.end_time, 'end_time');
@@ -145,6 +149,19 @@ export default async function(req) {
         'This class group has no valid class category and level. Update the class group before creating sessions.'
       );
     }
+
+    // Stored class size must already satisfy the same rule a newly saved class does
+    // (whole number, MIN_CAPACITY..MAX_CAPACITY via requireCapacity). A missing,
+    // non-numeric, fractional or out-of-range stored value is never defaulted or
+    // corrected into a session: the admin fixes the group first. No coercion, so a
+    // stored numeric string is refused instead of being parsed.
+    const capacityInvalid = jsonError(
+      409,
+      'This class group has no valid class size. Update the class group before creating sessions.'
+    );
+    if (typeof group.max_capacity !== 'number') return capacityInvalid;
+    const storedCapacity = requireCapacity(group.max_capacity);
+    if (storedCapacity.error) return capacityInvalid;
 
     const dates = weeklySessionDates(from.value, to.value, group.day_of_week);
     if (!dates.length) {
@@ -204,7 +221,8 @@ export default async function(req) {
           // later change to the group never rewrites this history.
           class_category: groupCategoryLevel.value.category,
           skill_level: groupCategoryLevel.value.level,
-          max_capacity: typeof group.max_capacity === 'number' ? group.max_capacity : null,
+          // Snapshot: the validated stored size, copied exactly as validated.
+          max_capacity: storedCapacity.value,
           notes: group.notes || null,
           status: 'scheduled'
         }))
