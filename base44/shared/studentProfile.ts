@@ -5,8 +5,20 @@ export const GENDER_VALUES = ['male', 'female', 'other'];
 export const SWIMMING_LEVEL_VALUES = ['beginner', 'intermediate', 'advanced'];
 export const DEPENDENT_RELATIONSHIPS = ['child', 'dependant', 'ward', 'sibling'];
 
+// Academy-admin controlled fields. A swimmer's level and progression notes are an
+// assessment decision, so no self-service path may set them: not registration, not
+// a profile create, not a profile edit — and not even for the caller's own account.
+// Kept as its own list because exactly ONE privileged endpoint
+// (updateStudentProgression) is allowed to write these two fields.
+export const LEVEL_CONTROLLED_FIELDS = ['swimming_level', 'skill_progression'];
+
+// Upper bound for the progression notes an admin may record.
+export const MAX_SKILL_PROGRESSION_LENGTH = 500;
+
 // Fields the server always controls. Never accepted from client input on any path.
 // NOTE: 'relationship' is handled per-function (rejected for self/update, required for dependent).
+// The two academy-admin controlled fields are included here so all four self-service
+// functions reject them through one list instead of four local copies.
 export const SERVER_CONTROLLED_FIELDS = [
   'account_id',
   'ownership_type',
@@ -15,16 +27,17 @@ export const SERVER_CONTROLLED_FIELDS = [
   'status',
   'date_joined',
   'date_left',
-  'reason_for_leaving'
+  'reason_for_leaving',
+  ...LEVEL_CONTROLLED_FIELDS
 ];
 
 // Fields a profile owner is allowed to edit directly.
+// Swimming level and progression are deliberately absent: they are written only
+// through updateStudentProgression, by an academy admin.
 export const MUTABLE_PROFILE_FIELDS = [
   'full_name',
   'date_of_birth',
   'gender',
-  'swimming_level',
-  'skill_progression',
   'medical_notes',
   'emergency_contact_name',
   'emergency_contact_phone'
@@ -128,14 +141,11 @@ export function validateProfileInput(input, opts) {
     values.gender = input.gender;
   }
 
-  if (input.swimming_level !== undefined) {
-    if (!SWIMMING_LEVEL_VALUES.includes(input.swimming_level)) {
-      return { error: jsonError(400, 'swimming_level must be one of beginner, intermediate, advanced') };
-    }
-    values.swimming_level = input.swimming_level;
-  }
+  // swimming_level / skill_progression are intentionally NOT handled here. They are
+  // validated only by the admin endpoint below; a self-service caller that sends
+  // them is rejected by rejectFields before this runs — never silently stripped.
 
-  for (const f of ['skill_progression', 'medical_notes', 'emergency_contact_name', 'emergency_contact_phone']) {
+  for (const f of ['medical_notes', 'emergency_contact_name', 'emergency_contact_phone']) {
     if (input[f] !== undefined) {
       if (typeof input[f] !== 'string') {
         return { error: jsonError(400, f + ' must be a string') };
@@ -145,6 +155,41 @@ export function validateProfileInput(input, opts) {
   }
 
   return { values };
+}
+
+// ------------------------------------------------- admin-controlled field validation
+
+// Validation for the ONE privileged write path (updateStudentProgression). Each
+// returns { value } or { error }. The enum is the same one stored in the Student
+// schema, so the endpoint can never introduce a value the schema does not accept.
+
+// A level is always one of the three known levels. Explicit null or an empty
+// string is refused: clearing a swimmer's level is not an approved operation,
+// only moving them to another level.
+export function requireSwimmingLevel(value) {
+  if (typeof value !== 'string' || !SWIMMING_LEVEL_VALUES.includes(value)) {
+    return { error: jsonError(400, 'swimming_level must be one of ' + SWIMMING_LEVEL_VALUES.join(', ')) };
+  }
+  return { value };
+}
+
+// Progression notes are free text, bounded. An EMPTY string is a deliberate clear
+// of the notes (returns null); anything that is not a string — including null — is
+// refused, so a missing value can never be mistaken for "erase the coach's notes".
+export function parseSkillProgression(value) {
+  if (typeof value !== 'string') {
+    return { error: jsonError(400, 'skill_progression must be text') };
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > MAX_SKILL_PROGRESSION_LENGTH) {
+    return {
+      error: jsonError(
+        400,
+        `skill_progression must be ${MAX_SKILL_PROGRESSION_LENGTH} characters or fewer`
+      )
+    };
+  }
+  return { value: trimmed === '' ? null : trimmed };
 }
 
 // Normalize a filter() result that may be a page object {items} or a bare array.

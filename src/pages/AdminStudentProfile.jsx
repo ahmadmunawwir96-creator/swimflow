@@ -15,7 +15,17 @@ import {
   statusLabel,
   statusStyle
 } from '@/lib/studentFormat';
-import { ArrowLeft, ShieldAlert, UserX, AlertTriangle, HeartPulse, Phone, ScrollText } from 'lucide-react';
+import StudentProgressionEditor from '@/components/students/StudentProgressionEditor';
+import {
+  ArrowLeft,
+  ShieldAlert,
+  UserX,
+  AlertTriangle,
+  HeartPulse,
+  Phone,
+  ScrollText,
+  TrendingUp
+} from 'lucide-react';
 
 function Field({ label, value }) {
   return (
@@ -185,20 +195,20 @@ export default function AdminStudentProfile() {
         </dl>
       </Section>
 
+      <Section title="Level and progression" icon={<TrendingUp className="h-4 w-4 text-brand" />}>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Only academy admins can change a swimmer's level or progression. Every change is
+          recorded in the audit trail.
+        </p>
+        <StudentProgressionEditor student={student} onSaved={setStudent} />
+      </Section>
+
       <Section title="Safety and notes" icon={<HeartPulse className="h-4 w-4 text-brand" />}>
         <dl className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <dt className="text-xs uppercase tracking-wide text-muted-foreground">Medical notes</dt>
             <dd className="text-sm mt-0.5 whitespace-pre-line">
               {student.medical_notes || <span className="text-muted-foreground">None recorded</span>}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">Skill progression</dt>
-            <dd className="text-sm mt-0.5 whitespace-pre-line">
-              {student.skill_progression || (
-                <span className="text-muted-foreground">Nothing recorded</span>
-              )}
             </dd>
           </div>
           <Field label="Emergency contact" value={student.emergency_contact_name} />

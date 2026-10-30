@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/select';
 
 const GENDERS = ['male', 'female', 'other'];
-const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const RELATIONSHIPS = ['child', 'dependant', 'ward', 'sibling'];
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -58,12 +57,6 @@ export default function RegisterProfileFields({ accountType, values, onChange })
             <SelectContent>{GENDERS.map((g) => <SelectItem key={g} value={g}>{cap(g)}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <Field label="Swimming level">
-          <Select value={values.swimming_level || ''} onValueChange={(v) => set('swimming_level', v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>{LEVELS.map((l) => <SelectItem key={l} value={l}>{cap(l)}</SelectItem>)}</SelectContent>
-          </Select>
-        </Field>
         {isParent && (
           <Field label="Relationship" required>
             <Select value={values.relationship || ''} onValueChange={(v) => set('relationship', v)}>
@@ -73,6 +66,10 @@ export default function RegisterProfileFields({ accountType, values, onChange })
           </Field>
         )}
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Swimming level and progression are set by academy admins after an assessment — not during registration.
+      </p>
 
       {!isParent && (
         <div className="grid sm:grid-cols-2 gap-3">

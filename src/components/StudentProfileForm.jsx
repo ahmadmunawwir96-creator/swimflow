@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/select';
 
 const GENDERS = ['male', 'female', 'other'];
-const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const RELATIONSHIPS = ['child', 'dependant', 'ward', 'sibling'];
+
+// Admin-managed values, shown read-only — never submitted from this form.
+const LEVEL_LABEL = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
 
 function Field({ label, children, required }) {
   return (
@@ -28,6 +30,39 @@ function Field({ label, children, required }) {
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Level and progression belong to the academy, not to the member: an academy admin
+// sets them after an assessment. An existing value is shown read-only so a member
+// can see where they stand, with a line saying who changes it.
+function AdminManagedFields({ mode, values }) {
+  const level = values?.swimming_level || null;
+  const progression = values?.skill_progression || null;
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1.5">
+      <p className="text-sm font-medium">Level and progression</p>
+      {mode === 'edit' ? (
+        <div className="space-y-1 text-sm text-muted-foreground">
+          <p>
+            Swimming level:{' '}
+            <span className="text-foreground">{LEVEL_LABEL[level] || 'Not set yet'}</span>
+          </p>
+          <p>
+            Progression notes:{' '}
+            <span className="text-foreground">{progression || 'Nothing recorded'}</span>
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Not set yet — this is added by the academy after your first assessment.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Managed by academy admins. Contact the academy to have your level reviewed.
+      </p>
+    </div>
+  );
+}
+
 // mode: 'self' (create self profile), 'dependent' (create dependent), 'edit' (update)
 export default function StudentProfileForm({
   mode = 'self',
@@ -40,8 +75,6 @@ export default function StudentProfileForm({
     full_name: '',
     date_of_birth: '',
     gender: '',
-    swimming_level: '',
-    skill_progression: '',
     medical_notes: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
@@ -54,12 +87,13 @@ export default function StudentProfileForm({
 
   const submit = (e) => {
     e.preventDefault();
+    // swimming_level / skill_progression are deliberately NOT part of the payload:
+    // they are academy-admin controlled and the server rejects any request that
+    // carries them. This form only ever writes the fields a member owns.
     const payload = {
       full_name: v.full_name.trim(),
       date_of_birth: v.date_of_birth,
       gender: v.gender || undefined,
-      swimming_level: v.swimming_level || undefined,
-      skill_progression: v.skill_progression?.trim() || undefined,
       medical_notes: v.medical_notes?.trim() || undefined,
       emergency_contact_name: v.emergency_contact_name?.trim() || undefined,
       emergency_contact_phone: v.emergency_contact_phone?.trim() || undefined
@@ -89,14 +123,6 @@ export default function StudentProfileForm({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Swimming level">
-          <Select value={v.swimming_level} onValueChange={(val) => set('swimming_level', val)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              {LEVELS.map((l) => <SelectItem key={l} value={l}>{cap(l)}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
         {mode === 'dependent' && (
           <Field label="Relationship" required>
             <Select value={v.relationship} onValueChange={(val) => set('relationship', val)}>
@@ -114,9 +140,7 @@ export default function StudentProfileForm({
           <Input value={v.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.target.value)} />
         </Field>
       </div>
-      <Field label="Skill progression notes">
-        <Input value={v.skill_progression} onChange={(e) => set('skill_progression', e.target.value)} />
-      </Field>
+      <AdminManagedFields mode={mode} values={initialValues} />
       <Field label="Medical notes">
         <Input value={v.medical_notes} onChange={(e) => set('medical_notes', e.target.value)} />
       </Field>

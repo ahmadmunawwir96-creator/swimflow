@@ -47,5 +47,6 @@ export const academyApi = {
   createSelfProfile: (values) => call('createMyStudentProfile', values),
   createDependentProfile: (values) => call('createDependentStudentProfile', values),
   updateMyProfile: (values) => call('updateMyStudentProfile', values),
+  updateStudentProgression: (values) => call('updateStudentProgression', values),
   registerAccount: (values) => call('registerAccount', values)
 };
