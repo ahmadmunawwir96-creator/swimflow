@@ -130,7 +130,13 @@ export async function findUserByEmail(base44, email) {
     const res = await base44.asServiceRole.entities.User.filter({ email });
     users = asArray(res);
   } catch (e) {
-    return { error: jsonError(500, 'User lookup is unavailable: ' + (e && e.message ? e.message : 'unknown error')) };
+    // An unexpected SDK/database failure is NOT "no such user": the caller would
+    // tell staff the person does not exist while the real problem is temporary.
+    // Diagnostics stay server-side; the client gets the shared generic message.
+    // jsonError is the local copy on purpose — directoryAccess.ts already imports
+    // this module, so importing its serverFailure here would be circular.
+    console.error('[academyRoles.findUserByEmail] user lookup failed', e && (e.stack || e.message || e));
+    return { error: jsonError(500, 'This information could not be loaded right now. Please try again.') };
   }
   if (users.length === 0) return { error: jsonError(404, 'No user found with that email') };
   return { user: users[0] };
