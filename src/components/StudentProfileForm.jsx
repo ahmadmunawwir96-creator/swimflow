@@ -30,9 +30,9 @@ function Field({ label, children, required }) {
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Level and progression belong to the academy, not to the member: an academy admin
-// sets them after an assessment. An existing value is shown read-only so a member
-// can see where they stand, with a line saying who changes it.
+// Level and progression belong to the academy, not to the member: they are set by
+// academy admins. An existing value is shown read-only so a member can see where
+// they stand, with a line saying who changes it.
 function AdminManagedFields({ mode, values }) {
   const level = values?.swimming_level || null;
   const progression = values?.skill_progression || null;
@@ -53,7 +53,7 @@ function AdminManagedFields({ mode, values }) {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Not set yet — this is added by the academy after your first assessment.
+          Not set yet. Set by academy admins.
         </p>
       )}
       <p className="text-xs text-muted-foreground">

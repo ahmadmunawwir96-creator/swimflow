@@ -32,6 +32,12 @@ export const academyApi = {
     call('promoteToAcademyAdmin', { target_user_id }),
   listRoles: (target_user_id) =>
     call('listAcademyRoles', target_user_id ? { target_user_id } : {}),
+  // System-owner only (server re-checks). Read current branch scope + the active
+  // branch choices for one academy Admin.
+  getAdminBranchAccess: (target_user_id) =>
+    call('getAdminBranchAccess', { target_user_id }),
+  // System-owner only (server re-checks). Sets the Admin's COMPLETE scope.
+  assignAdminBranches: (values) => call('assignAdminBranches', values),
   listStudents: (params) => call('listStudents', params || {}),
   getStudent: (studentId) => call('getStudent', { student_id: studentId }),
   getScheduleOptions: () => call('getScheduleOptions', {}),

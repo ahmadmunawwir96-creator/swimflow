@@ -68,7 +68,7 @@ export default function RegisterProfileFields({ accountType, values, onChange })
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Swimming level and progression are set by academy admins after an assessment — not during registration.
+        Swimming level and progression are set by academy admins, not during registration.
       </p>
 
       {!isParent && (

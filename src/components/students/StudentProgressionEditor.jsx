@@ -13,6 +13,8 @@ const LEVELS = [
 ];
 
 const NOTES_MAX = 500;
+const LEVEL_ID = 'progression-swimming-level';
+const NOTES_ID = 'progression-notes';
 const levelLabel = (value) => LEVELS.find((l) => l.value === value)?.label || null;
 
 // Editor for the two academy-admin controlled fields of a swimmer profile.
@@ -30,6 +32,9 @@ export default function StudentProgressionEditor({ student, onSaved }) {
   const [notes, setNotes] = useState(student?.skill_progression || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Set only when the server confirmed the write but could not record the audit
+  // entry. The saved values stand; the gap is stated rather than hidden.
+  const [auditWarning, setAuditWarning] = useState('');
   // The values the SERVER last confirmed.
   const [verified, setVerified] = useState({
     level: student?.swimming_level || null,
@@ -51,6 +56,7 @@ export default function StudentProgressionEditor({ student, onSaved }) {
     }
     setSaving(true);
     setError('');
+    setAuditWarning('');
     try {
       const res = await academyApi.updateStudentProgression({ student_id: student.id, ...patch });
       const saved = res?.student;
@@ -61,6 +67,11 @@ export default function StudentProgressionEditor({ student, onSaved }) {
       });
       setLevel(saved.swimming_level || '');
       setNotes(saved.skill_progression || '');
+      setAuditWarning(
+        res?.audit_recorded === false
+          ? 'The change was saved, but its audit entry could not be recorded. Tell the system owner so it can be noted manually.'
+          : ''
+      );
       if (onSaved) onSaved(saved);
     } catch (e) {
       // Deliberately no state reset: the admin's unsaved values stay on screen.
@@ -74,9 +85,9 @@ export default function StudentProgressionEditor({ student, onSaved }) {
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Swimming level</Label>
+          <Label htmlFor={LEVEL_ID} className="text-sm font-medium">Swimming level</Label>
           <Select value={level} onValueChange={setLevel} disabled={saving}>
-            <SelectTrigger>
+            <SelectTrigger id={LEVEL_ID}>
               <SelectValue placeholder="Not set yet" />
             </SelectTrigger>
             <SelectContent>
@@ -91,8 +102,10 @@ export default function StudentProgressionEditor({ student, onSaved }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-sm font-medium">Progression notes</Label>
+        <Label htmlFor={NOTES_ID} className="text-sm font-medium">Progression notes</Label>
         <Textarea
+          id={NOTES_ID}
+          aria-describedby={`${NOTES_ID}-counter`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={NOTES_MAX}
@@ -100,20 +113,27 @@ export default function StudentProgressionEditor({ student, onSaved }) {
           disabled={saving}
           placeholder="What this swimmer is working on and has achieved"
         />
-        <p className="text-xs text-muted-foreground">
+        <p id={`${NOTES_ID}-counter`} className="text-xs text-muted-foreground">
           {notes.length}/{NOTES_MAX} · clearing the text removes the notes
         </p>
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+        <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
+      {auditWarning && (
+        <div role="status" className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>{auditWarning}</span>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
+        <p role="status" className="text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Check className="h-4 w-4 text-brand" /> Saved:{' '}
             <span className="text-foreground">{levelLabel(verified.level) || 'No level'}</span>

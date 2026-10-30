@@ -93,12 +93,16 @@ export default function Dashboard() {
         {canManageRoles && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4" /> Role administration</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4" /> Staff & roles</CardTitle>
               <CardDescription>
-                {isAcademyAdmin ? 'Assign, change, or revoke academy roles' : 'Change members between Student, Parent, and Coach'}
+                {isAcademyAdmin
+                  ? 'Add a coach or academy admin, or change existing staff roles'
+                  : 'Change members between Student, Parent, and Coach'}
               </CardDescription>
             </CardHeader>
-            <CardContent><Button asChild size="sm"><Link to="/admin-roles">Manage roles</Link></Button></CardContent>
+            <CardContent>
+              <Button asChild size="sm"><Link to="/admin-roles">Add a coach or admin</Link></Button>
+            </CardContent>
           </Card>
         )}
       </div>

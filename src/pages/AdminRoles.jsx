@@ -22,7 +22,8 @@ import {
 import { academyApi } from '@/lib/academy';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown, AlertTriangle } from 'lucide-react';
+import { Search, ShieldCheck, UserCog, ArrowLeftRight, ChevronDown, Crown, AlertTriangle, Info } from 'lucide-react';
+import AdminBranchScopeEditor from '@/components/staff/AdminBranchScopeEditor';
 
 // Academy admins may move a member between any academy role.
 const ACADEMY_ADMIN_TARGETS = {
@@ -111,7 +112,10 @@ export default function AdminRoles() {
     setBusy(true);
     try {
       await academyApi.promoteToAdmin(found.user_id);
-      toast({ title: 'Promoted to Academy Admin' });
+      toast({
+        title: 'Promoted to Academy Admin',
+        description: 'Existing roles were kept. Branch access is a separate step and is not set yet.'
+      });
       setFound(null);
       setEmail('');
       loadList();
@@ -154,6 +158,13 @@ export default function AdminRoles() {
     }
   };
 
+  // Active academy admins are the only valid targets for branch access.
+  const activeAdmins = [
+    ...new Map(
+      assignments.filter((a) => a.is_active && a.role_name === 'admin').map((a) => [a.user_id, a])
+    ).values()
+  ];
+
   if (rolesLoading) return <p className="text-muted-foreground">Loading…</p>;
   // A failed role lookup must never read as "you are not an administrator".
   if (rolesError) {
@@ -186,7 +197,7 @@ export default function AdminRoles() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-heading font-semibold flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5" /> Role administration
+          <ShieldCheck className="h-5 w-5" /> Staff and roles
         </h1>
         <p className="text-muted-foreground">
           {isAcademyAdmin
@@ -197,11 +208,33 @@ export default function AdminRoles() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Search className="h-4 w-4" /> Find a member</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Info className="h-4 w-4" /> How to add a coach or admin</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            Staff need their own Swimflow account first. Ask them to sign up or sign in, then search
+            the email they registered with.
+          </p>
+          <p>
+            This page does not create accounts and does not send invitations or emails. It only adds
+            a role to an existing account, and roles already held are kept.
+          </p>
+          <p>
+            Promoting someone to Academy Admin and giving them branch access are separate steps.
+            {isAppAdmin
+              ? ' Branch access is set at the bottom of this page.'
+              : ' Only the system owner can set branch access.'}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Search className="h-4 w-4" /> Add a coach or admin</CardTitle>
           <CardDescription>
             {isAcademyAdmin
-              ? 'Search by email to assign a role or promote to Academy Admin.'
-              : 'Search by email to assign Student or Parent.'}
+              ? 'Search the email they signed up with to add a role or promote to Academy Admin.'
+              : 'Search the email they signed up with to add Student or Parent.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -315,6 +348,8 @@ export default function AdminRoles() {
           )}
         </CardContent>
       </Card>
+
+      {isAppAdmin && <AdminBranchScopeEditor admins={activeAdmins} onApplied={loadList} />}
     </div>
   );
 }
