@@ -41,20 +41,11 @@ export function serverFailure(scope) {
   return jsonError(500, 'This information could not be loaded right now. Please try again.');
 }
 
-// True ONLY when the SDK reported that the record does not exist.
-//
-// This is deliberately strict. Treating every thrown error as "not found" turns a
-// rate limit, a database outage or an SDK failure into "this student does not
-// exist" — the screen then tells staff the swimmer is gone when the real problem
-// is temporary. Any error that is not a genuine 404 must reach the generic server
-// failure handler instead.
-export function isNotFoundError(e) {
-  if (!e) return false;
-  const status = e.status || e.statusCode || (e.response && e.response.status);
-  if (status === 404) return true;
-  const code = typeof e.code === 'string' ? e.code.toLowerCase() : '';
-  return code === 'not_found' || code === 'notfound';
-}
+// True ONLY when the SDK reported that the record does not exist. The definition
+// lives in shared/sdkErrors.ts so academyRoles and classAccess can share it without
+// an import cycle; it is re-exported here because existing callers import it from
+// this module.
+export { isNotFoundError } from './sdkErrors.ts';
 
 // 1. Trusted identity. The caller id comes from the verified session, never a body field.
 export async function authenticateCaller(base44) {

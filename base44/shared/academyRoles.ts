@@ -3,6 +3,7 @@
 // No state, no SDK side effects beyond the calls the caller passes in.
 
 import { asArray } from './studentProfile.ts';
+import { isNotFoundError } from './sdkErrors.ts';
 
 // Re-export the page/array normalizer under the alias the list function imports.
 export { asArray as asArrayFallback };
@@ -95,19 +96,33 @@ export async function getActiveCoachAssignment(base44, userId) {
 }
 
 // Resolve a target User by id via service role. Returns { user } or { error: 404 }.
-// User.filter is not available; User.get(id) is. A bad/missing id throws -> 404.
+// User.filter is not available; User.get(id) is.
+//
+// Only a GENUINE "no such user" is a 404: a missing/blank id, a null result, or an
+// SDK error that reports 404 / not_found. Any other failure (rate limit, database
+// outage, SDK error) is rethrown so the calling endpoint answers with its existing
+// generic 500 — reported to staff as "that user does not exist" it would be a lie,
+// and listings that enrich rows through resolveUserMap would silently drop real
+// coaches and staff from the screen. Diagnostics and the generic message both stay
+// with the callers' existing handlers, so no SDK detail ever reaches the client.
 export async function findUserById(base44, userId) {
+  const missing = { error: jsonError(404, 'Target user not found') };
+  if (!userId) return missing;
+  let user;
   try {
-    const user = await base44.asServiceRole.entities.User.get(userId);
-    if (!user) return { error: jsonError(404, 'Target user not found') };
-    return { user };
-  } catch {
-    return { error: jsonError(404, 'Target user not found') };
+    user = await base44.asServiceRole.entities.User.get(userId);
+  } catch (error) {
+    if (!isNotFoundError(error)) throw error;
+    return missing;
   }
+  if (!user) return missing;
+  return { user };
 }
 
-// Resolve a map of user_id -> User for a set of ids (deduped). Missing users are
-// omitted from the map. Used to enrich role-assignment listings with human names
+// Resolve a map of user_id -> User for a set of ids (deduped). A user that genuinely
+// does not exist is omitted from the map. Any OTHER lookup failure rejects the whole
+// call: a listing must fail loudly rather than silently omit coaches and staff who
+// do exist. Used to enrich role-assignment and class listings with human names
 // instead of bare IDs. Bounded to the assignment count (admin screen, small N).
 export async function resolveUserMap(base44, userIds) {
   const unique = [...new Set((userIds || []).filter(Boolean))];
