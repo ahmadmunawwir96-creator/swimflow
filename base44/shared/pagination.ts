@@ -77,12 +77,3 @@ export async function readAllPages(readPage, options) {
   // Cap reached with work still claimed: refuse rather than return what we have.
   throw pageFailure(label, maxPages, `page cap of ${maxPages} reached before the end of the results`);
 }
-
-// Normalize a single-page read that may be a page object or a bare array.
-// Used where only one page is genuinely wanted (bounded option lists), never for
-// correctness-critical conflict or duplicate reads.
-export function asSinglePage(pageOrArray) {
-  if (Array.isArray(pageOrArray)) return pageOrArray;
-  if (pageOrArray && Array.isArray(pageOrArray.items)) return pageOrArray.items;
-  return [];
-}
