@@ -43,7 +43,7 @@ export const MUTABLE_PROFILE_FIELDS = [
   'emergency_contact_phone'
 ];
 
-export function jsonError(status, message, extra?) {
+export function jsonError(status, message, extra) {
   const body = { error: message };
   if (extra) Object.assign(body, extra);
   return Response.json(body, { status });
@@ -69,7 +69,7 @@ export function todayISODate() {
 }
 
 // Whole-year age from a YYYY-MM-DD date of birth (UTC-stable).
-export function ageFromDOB(dobStr, now?) {
+export function ageFromDOB(dobStr, now) {
   if (!isValidISODate(dobStr)) return null;
   const ref = now || new Date();
   const dob = new Date(dobStr + 'T00:00:00Z');
@@ -83,7 +83,7 @@ export function ageFromDOB(dobStr, now?) {
 // Never returns 'given'. Preserves a previously recorded 'given'/'refused'
 // (flagging it for review) when the new DOB is still a minor.
 // `prev` may be undefined for a brand-new profile.
-export function consentForSelf(dobStr, prev?) {
+export function consentForSelf(dobStr, prev) {
   const age = ageFromDOB(dobStr);
   if (age === null) return null;
   if (age >= 18) return { consent_status: 'not_required', needs_review: false };
@@ -114,8 +114,7 @@ export function validateProfileInput(input, opts) {
   const o = opts || {};
   const requireName = o.requireName !== false;
   const requireDob = o.requireDob !== false;
-  // Explicitly a record: callers add server-derived fields after validation.
-  const values: Record<string, any> = {};
+  const values = {};
 
   if (input.full_name !== undefined) {
     if (typeof input.full_name !== 'string' || !input.full_name.trim()) {

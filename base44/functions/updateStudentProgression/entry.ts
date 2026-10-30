@@ -65,7 +65,7 @@ export default async function(req) {
     if (sid.error) return sid.error;
 
     // ---- field validation, before the record is even read ----
-    const patch: Record<string, any> = {};
+    const patch = {};
     if (body.swimming_level !== undefined) {
       const level = requireSwimmingLevel(body.swimming_level);
       if (level.error) return level.error;
@@ -105,7 +105,7 @@ export default async function(req) {
     const branch = (scope.branches || []).find((b) => b.id === student.home_branch_id);
 
     // ---- only genuinely different values reach the database ----
-    const changes: Record<string, any> = {};
+    const changes = {};
     if (patch.swimming_level !== undefined && patch.swimming_level !== (student.swimming_level || null)) {
       changes.swimming_level = patch.swimming_level;
     }
@@ -125,7 +125,7 @@ export default async function(req) {
       );
     }
 
-    const before: Record<string, any> = {};
+    const before = {};
     changedFields.forEach((field) => {
       before[field] = student[field] === undefined ? null : student[field] || null;
     });

@@ -85,7 +85,7 @@ export default async function(req) {
     }
 
     const updated = await base44.asServiceRole.entities.Student.update(student.id, updates);
-    const result: Record<string, any> = { student: updated };
+    const result = { student: updated };
     if (consentReviewRecommended) result.consent_review_recommended = true;
     return Response.json(result, { status: 200 });
   } catch (error) {

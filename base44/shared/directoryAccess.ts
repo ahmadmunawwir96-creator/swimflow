@@ -28,7 +28,7 @@ export const DIRECTORY_ALLOWED_PARAMS = ['search', 'status', 'limit', 'cursor', 
 // Mirrors the Student.status enum. 'all' and empty both mean "no status filter".
 export const STUDENT_STATUS_VALUES = ['active', 'inactive', 'trial', 'left'];
 
-export function jsonError(status, message, extra?) {
+export function jsonError(status, message, extra) {
   const body = { error: message };
   if (extra) Object.assign(body, extra);
   return Response.json(body, { status });
