@@ -9,6 +9,8 @@
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
+    "check:backend": "tsc -p tsconfig.backend.json",
+    "test:backend": "node --import ./tests/harness/register.mjs --test tests/backend/*.test.mjs tests/unit/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

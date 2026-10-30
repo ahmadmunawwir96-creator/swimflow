@@ -356,9 +356,9 @@ export async function loadAdminCoaches(base44, roles) {
     { role_id: coachRole.id, is_active: true },
     { limit: 200 }
   );
-  const ids = [...new Set(asArray(page).map((row) => row.user_id).filter(Boolean))];
+  const ids: string[] = [...new Set(asArray(page).map((row) => row.user_id).filter(Boolean))] as string[];
   if (!ids.length) return [];
-  const users = await resolveUserMap(base44, ids);
+  const users: Record<string, any> = await resolveUserMap(base44, ids);
   return ids
     .filter((id) => Boolean(users[id]))
     .map((id) => ({ user_id: id, name: displayName(users[id]) }))

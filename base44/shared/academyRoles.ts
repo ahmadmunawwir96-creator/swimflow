@@ -35,7 +35,7 @@ export function isPlatformAdmin(user) {
   return !!user && user.role === 'admin';
 }
 
-export function jsonError(status, message, extra) {
+export function jsonError(status, message, extra?) {
   const body = { error: message };
   if (extra) Object.assign(body, extra);
   return Response.json(body, { status });
@@ -141,10 +141,10 @@ export async function findUserById(base44, userId) {
 // do exist. Used to enrich role-assignment and class listings with human names
 // instead of bare IDs. Bounded to the assignment count (admin screen, small N).
 export async function resolveUserMap(base44, userIds) {
-  const unique = [...new Set((userIds || []).filter(Boolean))];
-  const map = {};
+  const unique: string[] = [...new Set((userIds || []).filter(Boolean))] as string[];
+  const map: Record<string, any> = {};
   const results = await Promise.all(unique.map((id) => findUserById(base44, id)));
-  results.forEach((r, idx) => {
+  results.forEach((r: any, idx: number) => {
     if (r.user) map[unique[idx]] = r.user;
   });
   return map;

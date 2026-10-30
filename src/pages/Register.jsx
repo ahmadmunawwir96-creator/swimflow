@@ -13,6 +13,7 @@ import RegisterProfileFields from "@/components/RegisterProfileFields";
 import { academyApi } from "@/lib/academy";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { buildRegistrationPayload } from "@/lib/registrationPayload";
 
 const ACCOUNT_TYPES = [
   { value: "independent", title: "Independent swimmer", desc: "You are the swimmer. Manage your own profile and bookings.", icon: User },
@@ -72,7 +73,7 @@ export default function Register() {
       if (result?.access_token) base44.auth.setToken(result.access_token);
       // Auto-create role + swimmer profile based on the chosen account type.
       try {
-        await academyApi.registerAccount({ account_type: accountType, ...profile });
+        await academyApi.registerAccount(buildRegistrationPayload(accountType, profile));
       } catch (e) {
         toast({ title: "Profile setup incomplete", description: e.message, variant: "destructive" });
       }

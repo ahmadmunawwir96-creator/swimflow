@@ -12,6 +12,7 @@ import {
 import { resolveAdminBranchScope, isStudentInScope, isScopeEmpty } from '../../shared/adminScope.ts';
 import { requireString } from '../../shared/academyRoles.ts';
 import { requireSwimmingLevel, parseSkillProgression } from '../../shared/studentProfile.ts';
+import { serializeAuditDetails } from '../../shared/auditDetails.ts';
 
 // The ONLY way a swimmer's level or progression notes change.
 //
@@ -64,7 +65,7 @@ export default async function(req) {
     if (sid.error) return sid.error;
 
     // ---- field validation, before the record is even read ----
-    const patch = {};
+    const patch: Record<string, any> = {};
     if (body.swimming_level !== undefined) {
       const level = requireSwimmingLevel(body.swimming_level);
       if (level.error) return level.error;
@@ -104,7 +105,7 @@ export default async function(req) {
     const branch = (scope.branches || []).find((b) => b.id === student.home_branch_id);
 
     // ---- only genuinely different values reach the database ----
-    const changes = {};
+    const changes: Record<string, any> = {};
     if (patch.swimming_level !== undefined && patch.swimming_level !== (student.swimming_level || null)) {
       changes.swimming_level = patch.swimming_level;
     }
@@ -124,7 +125,7 @@ export default async function(req) {
       );
     }
 
-    const before = {};
+    const before: Record<string, any> = {};
     changedFields.forEach((field) => {
       before[field] = student[field] === undefined ? null : student[field] || null;
     });
@@ -133,6 +134,9 @@ export default async function(req) {
 
     // AuditLog is append-only: actor, target, branch and before/after for exactly
     // the two authorized fields. The rest of the profile is never copied here.
+    // serializeAuditDetails keeps `details` valid JSON at any length — never a raw
+    // slice, which would cut the JSON mid-object.
+    let auditRecorded = true;
     try {
       await base44.asServiceRole.entities.AuditLog.create({
         action: 'student_progression_updated',
@@ -142,11 +146,14 @@ export default async function(req) {
         target_id: student.id,
         branch_id: student.home_branch_id || null,
         summary: `Updated ${changedFields.join(' and ')} for ${student.full_name || 'swimmer'}`,
-        details: JSON.stringify({ changed: changedFields, before, after: changes }).slice(0, 2000)
+        details: serializeAuditDetails({ changed: changedFields, before, after: changes })
       });
     } catch (auditError) {
-      // Never fail a completed write because the audit trail hiccuped, but make the
-      // gap visible in the function logs.
+      // The profile change is already committed and is NOT rolled back — there is no
+      // transaction to roll back with, and undoing a deliberate assessment would be
+      // worse than a missing audit row. The gap is logged server-side and reported
+      // honestly to the caller, so nobody believes the trail is complete when it is not.
+      auditRecorded = false;
       console.error(
         '[updateStudentProgression] audit write failed',
         auditError && (auditError.message || auditError)
@@ -156,7 +163,8 @@ export default async function(req) {
     return Response.json(
       {
         student: projectStudentDetail(updated, branch ? branch.name : null),
-        changed: changedFields
+        changed: changedFields,
+        audit_recorded: auditRecorded
       },
       { status: 200 }
     );
