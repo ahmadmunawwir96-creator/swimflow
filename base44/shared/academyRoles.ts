@@ -49,24 +49,40 @@ export async function findRoleByName(base44, name) {
   return { role: roles[0] };
 }
 
+// Resolve a Role that MUST exist, or throw.
+//
+// A missing Role record is a CONFIGURATION failure, not "this user has no
+// assignment". Collapsing the two would deny an authorised admin (403) or tell
+// bootstrap that the academy has no admins at all — the failure would be invisible.
+// Throwing hands it to the calling endpoint's existing generic-500 handler, so the
+// client sees the shared failure message and the detail stays in the logs.
+export async function requireRoleByName(base44, name) {
+  const roleRes = await findRoleByName(base44, name);
+  if (roleRes.error) {
+    console.error('[academyRoles.requireRoleByName] required role is unavailable', name);
+    throw new Error(`Required role '${name}' is not configured`);
+  }
+  return roleRes.role;
+}
+
 // Return the caller's active academy-admin UserRole record, or null.
+// A healthy empty result (no assignment) stays null; an unavailable role config throws.
 export async function getActiveAcademyAdminAssignment(base44, userId) {
-  const roleRes = await findRoleByName(base44, ACADEMY_ADMIN_ROLE);
-  if (roleRes.error) return null;
+  const role = await requireRoleByName(base44, ACADEMY_ADMIN_ROLE);
   const page = await base44.asServiceRole.entities.UserRole.filter(
-    { user_id: userId, role_id: roleRes.role.id, is_active: true },
+    { user_id: userId, role_id: role.id, is_active: true },
     { limit: 1 }
   );
   return asArray(page)[0] || null;
 }
 
 // Return ALL active academy-admin UserRole assignments. Used for bootstrap reuse
-// check and last-admin guard.
+// check and last-admin guard. An unavailable role config throws instead of
+// reporting an empty admin set — bootstrap must never read that as "none exist".
 export async function listActiveAcademyAdmins(base44) {
-  const roleRes = await findRoleByName(base44, ACADEMY_ADMIN_ROLE);
-  if (roleRes.error) return { assignments: [] };
+  const role = await requireRoleByName(base44, ACADEMY_ADMIN_ROLE);
   const page = await base44.asServiceRole.entities.UserRole.filter(
-    { role_id: roleRes.role.id, is_active: true },
+    { role_id: role.id, is_active: true },
     { limit: 100 }
   );
   return { assignments: asArray(page) };
@@ -82,11 +98,11 @@ export async function getActiveAssignment(base44, userId, roleId) {
 }
 
 // Resolve an active assignment for (user, role NAME). Returns record or null.
-// Generic helper for server-side gates on any academy role.
+// Generic helper for server-side gates on any academy role. A healthy empty result
+// stays null; an unavailable role config throws (see requireRoleByName).
 export async function getActiveRoleAssignment(base44, userId, roleName) {
-  const roleRes = await findRoleByName(base44, roleName);
-  if (roleRes.error) return null;
-  return getActiveAssignment(base44, userId, roleRes.role.id);
+  const role = await requireRoleByName(base44, roleName);
+  return getActiveAssignment(base44, userId, role.id);
 }
 
 // Convenience gate for future coach-scoped functions (class assignment,

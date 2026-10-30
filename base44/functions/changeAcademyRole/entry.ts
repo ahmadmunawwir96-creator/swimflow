@@ -108,8 +108,14 @@ export default async function(req) {
       }, { status: 201 });
     } catch (assignError) {
       // Partial failure: old role revoked, new role NOT assigned. Not atomic.
+      // Raw SDK/database detail stays in the function logs — the client gets an
+      // honest description of the ACTUAL state plus how to recover, nothing internal.
+      console.error(
+        '[changeAcademyRole] new-role assignment failed after the old role was revoked',
+        assignError && (assignError.stack || assignError.message || assignError)
+      );
       return Response.json({
-        error: `Role change failed partway: the '${fromRn.value}' role was revoked, but the '${toRn.value}' role could not be assigned. ${(assignError && assignError.message) || ''}`.trim(),
+        error: `Role change failed partway: the '${fromRn.value}' role was revoked, but the '${toRn.value}' role could not be assigned.`,
         partial: true,
         from_assignment: { id: deactivated.id, role_name: fromRn.value, is_active: false },
         to_role_name: toRn.value,
