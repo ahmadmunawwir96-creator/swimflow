@@ -18,7 +18,7 @@ import {
   minutesOf,
   projectMemberClass,
   buildClassContext,
-  displayName,
+  memberDisplayName,
   LEVELS,
   LEVEL_LABELS,
   MEMBER_MAX_WINDOW_DAYS
@@ -138,7 +138,9 @@ export default async function(req) {
     if (coachIds.length) {
       const users = await resolveUserMap(base44, coachIds);
       coachIds.forEach((id) => {
-        const name = displayName(users[id]);
+        // Member view: a name only. Never the coach's email address — see
+        // memberDisplayName; unnamed coaches fall through to the screen's own label.
+        const name = memberDisplayName(users[id]);
         if (name) coachNames[id] = name;
       });
     }

@@ -306,6 +306,19 @@ export function displayName(user) {
   return user.full_name || user.display_name || user.email || null;
 }
 
+// Member-facing name for the swimmer/parent timetable. Same preference order as
+// displayName WITHOUT the email fallback: an email address is personal data and a
+// member screen must never surface it. A coach with no usable name stays unnamed
+// (null) and the screen shows its own "Coach to be confirmed" label. Staff screens
+// keep using displayName above, where the email fallback is legitimate.
+export function memberDisplayName(user) {
+  if (!user) return null;
+  const full = typeof user.full_name === 'string' ? user.full_name.trim() : '';
+  if (full) return full;
+  const display = typeof user.display_name === 'string' ? user.display_name.trim() : '';
+  return display || null;
+}
+
 // ---------------------------------------------------------------- venue / coach options
 
 // Venues inside the caller's authorized branches, with the branch name attached.
